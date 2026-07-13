@@ -79,5 +79,6 @@ claude plugin validate --strict .             # プラグイン検証
   hooks.json は Phase 3 で同梱する（未実装コマンドのノイズ回避。02 §6.6）。
 
 qmd を使う場合: `npm install -g @tobilu/qmd`（Node.js 22+）ののち
-`kg init --with-qmd`。qmd のコマンド体系との整合（詳細設計 04 §8.4 の実機確認）
-が未了の間、vsearch / hybrid は動作しない可能性がある。
+`kg init --with-qmd`（コレクション登録・埋め込み生成まで行う）。
+qmd 2.5.3 で実機確認済み（詳細設計 04 §8.4）。CPU 環境では vsearch / hybrid は
+1 クエリ 10〜45 秒程度かかる（クエリ拡張・リランカーの LLM 推論を含むため）。

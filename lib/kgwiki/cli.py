@@ -197,9 +197,12 @@ def cmd_init(args):
                 print(f"kg init: qmd 連携を有効化（version_range: {version_range}）",
                       file=sys.stderr)
             try:
+                name = qmdfacade.register_collection(layer)
+                if not args.quiet:
+                    print(f"kg init: qmd コレクション: {name}", file=sys.stderr)
                 qmdfacade.sync(layer.root)
             except Exception as e:
-                print(f"kg init: 警告: qmd 同期に失敗（次回 build で再同期）: {e}",
+                print(f"kg init: 警告: qmd 登録・同期に失敗（次回 build で再同期）: {e}",
                       file=sys.stderr)
     return 0
 

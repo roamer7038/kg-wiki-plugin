@@ -1,8 +1,8 @@
 [
-  {"path": "{root}/topics/llm/pages/concepts/graphrag.md", "score": 0.92, "snippet": "GraphRAG はコミュニティ検出と..."},
-  {"path": "{root}/topics/llm/pages/concepts/graphrag.md", "score": 0.88, "snippet": "同一ページの別チャンク"},
-  {"path": "{root}/topics/llm/pages/concepts/rag.md", "score": 0.81, "snippet": "検索拡張生成の..."},
-  {"path": "{root}/outside/not-a-page.md", "score": 0.75, "snippet": "パターン外"},
-  {"path": "{root}/topics/llm/pages/concepts/BAD SLUG.md", "score": 0.70, "snippet": "非正準 slug"},
-  {"path": "{root}/topics/llm/pages/papers/lightrag.md", "score": 0.81, "snippet": "同点スコア"}
+  {"file": "{root}/topics/llm/pages/concepts/graphrag.md", "score": 0.92, "snippet": "GraphRAG はコミュニティ検出と..."},
+  {"file": "{root}/topics/llm/pages/concepts/graphrag.md", "score": 0.88, "snippet": "同一ページの別チャンク"},
+  {"file": "{root}/topics/llm/pages/concepts/rag.md", "score": 0.81, "snippet": "検索拡張生成の..."},
+  {"file": "{root}/outside/not-a-page.md", "score": 0.75, "snippet": "パターン外"},
+  {"file": "{root}/topics/llm/pages/concepts/BAD SLUG.md", "score": 0.70, "snippet": "非正準 slug"},
+  {"file": "{root}/topics/llm/pages/papers/lightrag.md", "score": 0.81, "snippet": "同点スコア"}
 ]

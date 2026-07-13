@@ -16,11 +16,18 @@ sys.path.insert(0, str(LIB))
 
 
 def clean_env(project_dir=None):
-    """kg の層解決に影響する環境変数を隔離した env を返す。"""
+    """kg の層解決に影響する環境変数を隔離した env を返す。
+
+    実 qmd を含む PATH ディレクトリは除外する（テストが利用者の qmd index
+    ~/.cache/qmd に触れない保証。qmd を使うテストはスタブを PATH 先頭に置く）。
+    """
     env = dict(os.environ)
     for key in list(env):
         if key.startswith("CLAUDE_PLUGIN_OPTION_") or key == "KG_WIKI_ROOT":
             del env[key]
+    env["PATH"] = os.pathsep.join(
+        d for d in env.get("PATH", "").split(os.pathsep)
+        if d and not (Path(d) / "qmd").exists())
     # CLAUDE_PROJECT_DIR を必ず固定し、実行環境のプロジェクト層を拾わない
     env["CLAUDE_PROJECT_DIR"] = str(project_dir) if project_dir else tempfile.gettempdir()
     return env

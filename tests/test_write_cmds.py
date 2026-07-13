@@ -53,11 +53,46 @@ class TestInit(unittest.TestCase):
                             root=Path(tmp) / "wiki")
             self.assertEqual(result.returncode, 3)
 
-    def test_with_qmd_gate_exit4(self):
+    def test_with_qmd_absent_exit4(self):
+        from helpers import clean_env
         with tempfile.TemporaryDirectory() as tmp:
+            env = clean_env()
+            env["PATH"] = "/usr/bin:/bin"  # qmd を含まない PATH
             result = run_kg(["init", "--layer", "global", "--with-qmd"],
-                            root=Path(tmp) / "wiki")
+                            root=Path(tmp) / "wiki", env=env)
             self.assertEqual(result.returncode, 4)
+
+    def test_with_qmd_enables_config(self):
+        import os
+        import stat
+        from helpers import clean_env
+        with tempfile.TemporaryDirectory() as tmp:
+            stub_dir = Path(tmp) / "bin"
+            stub_dir.mkdir()
+            stub = stub_dir / "qmd"
+            stub.write_text(
+                '#!/bin/sh\ncase "$1" in\n'
+                '  --version) echo "qmd 9.9.9 (stub)";;\n'
+                '  collection) [ "$2" = "list" ] && echo "" || echo ok;;\n'
+                '  vsearch|query) echo "[]";;\n'
+                '  *) echo ok;;\n'
+                'esac\nexit 0\n', encoding="utf-8")
+            stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+            env = clean_env()
+            env["PATH"] = f"{stub_dir}:/usr/bin:/bin"
+            root = Path(tmp) / "wiki"
+            result = run_kg(["init", "--layer", "global", "--topic", "llm",
+                             "--with-qmd", "--date", "2026-07-13"],
+                            root=root, env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            config = (root / "config.yml").read_text(encoding="utf-8")
+            self.assertIn("enabled: true", config)
+            self.assertIn("version_range:", config)
+            # 有効化後は vsearch が実行できる（スタブは空結果）
+            result = run_kg(["vsearch", "q", "--layer", "global"], root=root,
+                            env=env)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout, "")
 
 
 class TestNewAndLog(unittest.TestCase):
