@@ -1,0 +1,26 @@
+{
+  "corpus": "tests/fixtures/wiki-mini",
+  "description": "Phase 2 完了条件の固定クエリセット（01 §9）。kind: lexical = 固有名詞・既知キーワード / semantic = 曖昧・意味系",
+  "queries": [
+    {"id": 1, "kind": "lexical", "query": "graphrag", "expected": ["llm/concepts/graphrag"]},
+    {"id": 2, "kind": "lexical", "query": "lightrag", "expected": ["llm/papers/lightrag"]},
+    {"id": 3, "kind": "lexical", "query": "qmd", "expected": ["tools/concepts/qmd"]},
+    {"id": 4, "kind": "lexical", "query": "ナレッジグラフ", "expected": ["llm/concepts/knowledge-graph"]},
+    {"id": 5, "kind": "lexical", "query": "microsoft", "expected": ["llm/entities/microsoft"]},
+    {"id": 6, "kind": "lexical", "query": "rag サーベイ", "expected": ["llm/papers/rag-survey"]},
+    {"id": 7, "kind": "lexical", "query": "コミュニティ検出", "expected": ["llm/concepts/community-detection"]},
+    {"id": 8, "kind": "lexical", "query": "agentic search", "expected": ["llm/concepts/agentic-search"]},
+    {"id": 9, "kind": "lexical", "query": "ベクトル検索", "expected": ["llm/concepts/vector-search"]},
+    {"id": 10, "kind": "lexical", "query": "適応的検索", "expected": ["llm/concepts/adaptive-retrieval"]},
+    {"id": 11, "kind": "semantic", "query": "意味が近い文書を探す方法", "expected": ["llm/concepts/vector-search"]},
+    {"id": 12, "kind": "semantic", "query": "知識の全体像を俯瞰して要約したい", "expected": ["llm/concepts/graphrag", "llm/concepts/community-detection"]},
+    {"id": 13, "kind": "semantic", "query": "グラフの構築コストを抑えて更新する", "expected": ["llm/papers/lightrag", "llm/concepts/increment"]},
+    {"id": 14, "kind": "semantic", "query": "外部知識を使って生成の事実性を高める", "expected": ["llm/concepts/rag"]},
+    {"id": 15, "kind": "semantic", "query": "クエリを言い換えながら繰り返し探す", "expected": ["llm/concepts/agentic-search", "llm/concepts/adaptive-retrieval"]},
+    {"id": 16, "kind": "semantic", "query": "古い検索手法を置き換えたい", "expected": ["llm/concepts/vector-search", "llm/concepts/old-search"]},
+    {"id": 17, "kind": "semantic", "query": "概念同士の関係を型付きで表現する", "expected": ["llm/concepts/knowledge-graph"]},
+    {"id": 18, "kind": "semantic", "query": "プロジェクト固有の意思決定の記録", "expected": ["proj/decisions/use-kg-wiki", "llm/decisions/adopt-graphrag"]},
+    {"id": 19, "kind": "semantic", "query": "ローカルで動く文書検索ツール", "expected": ["tools/concepts/qmd"]},
+    {"id": 20, "kind": "semantic", "query": "どんなときにグラフ検索が有効か知りたい", "expected": ["llm/papers/graphrag-bench", "llm/concepts/graphrag"]}
+  ]
+}
