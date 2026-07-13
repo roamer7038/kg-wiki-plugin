@@ -1,4 +1,4 @@
-"""kg path: 距離誘導 DFS による最短経路の有界列挙（03 §4.6、04 §4.3、A-16）。"""
+"""kg path: 距離誘導 DFS による最短経路の有界列挙。"""
 
 from collections import deque
 

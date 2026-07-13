@@ -1,4 +1,4 @@
-"""kg init / kg new（基本設計 03 §4.2、§4.9）。"""
+"""kg init / kg new。"""
 
 import sys
 from pathlib import Path
@@ -66,7 +66,7 @@ def run_init(layer, topic_names, date, quiet=False) -> bool:
 
 
 def new_page_issues(layer, cfg, ref_text: str):
-    """kg new / kg move の事前検証（exit 2 相当の issue 列。03 §4.9）。"""
+    """kg new / kg move の事前検証（exit 2 相当の issue 列）。"""
     issues = []
     try:
         ref = refs.parse_ref(ref_text)

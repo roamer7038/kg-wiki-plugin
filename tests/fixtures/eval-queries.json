@@ -1,6 +1,6 @@
 {
   "corpus": "tests/fixtures/wiki-mini",
-  "description": "Phase 2 完了条件の固定クエリセット（01 §9）。kind: lexical = 固有名詞・既知キーワード / semantic = 曖昧・意味系",
+  "description": "検索評価用の固定クエリセット。kind: lexical = 固有名詞・既知キーワード / semantic = 曖昧・意味系",
   "queries": [
     {"id": 1, "kind": "lexical", "query": "graphrag", "expected": ["llm/concepts/graphrag"]},
     {"id": 2, "kind": "lexical", "query": "lightrag", "expected": ["llm/papers/lightrag"]},

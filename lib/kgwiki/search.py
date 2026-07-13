@@ -1,10 +1,10 @@
-"""kg search: 語彙検索（基本設計 03 §4.4、詳細設計 04 §3。BM25 不使用: A-11）。"""
+"""kg search: 語彙検索（BM25 不使用）。"""
 
 from . import layers as layers_mod
 from . import output
 from . import pages as pages_mod
 
-# CJK 判定ブロック（04 §3.2。追加ブロックは採らない）
+# CJK 判定ブロック（追加ブロックは採らない）
 CJK_RANGES = (
     (0x3040, 0x309F),  # ひらがな
     (0x30A0, 0x30FF),  # カタカナ
@@ -27,7 +27,7 @@ def bigrams(term: str):
 
 
 def _match_one(term: str, text: str) -> float:
-    """項 × 単一フィールド文字列の生一致点 m（04 §3.1。完全一致は呼び出し側）。"""
+    """項 × 単一フィールド文字列の生一致点 m（完全一致は呼び出し側）。"""
     if not text:
         return 0.0
     if is_cjk_term(term) and len(term) >= 2:

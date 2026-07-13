@@ -1,4 +1,4 @@
-"""kg move: 移動・被参照書換・中断からの収束（03 §4.8、04 §6。T9）。"""
+"""kg move: 移動・被参照書換・中断からの収束。"""
 
 import tempfile
 import unittest
@@ -88,7 +88,7 @@ class TestMove(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
 
     def test_interrupted_move_converges(self):
-        # 人工中断状態: ページは移動済み・参照書換は未実施（04 §6.1 の「移動済み」）
+        # 人工中断状態: ページは移動済み・参照書換は未実施
         old = self.fix / "global/topics/llm/pages/concepts/rag.md"
         new = self.fix / "global/topics/llm/pages/concepts/vanilla-rag.md"
         text = old.read_text(encoding="utf-8") \

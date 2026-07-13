@@ -1,4 +1,4 @@
-"""書き込み系規約: init 冪等・new 衝突・ロック・log 書式・--date 決定論（03 §7.2。T10）。"""
+"""書き込み系規約: init 冪等・new 衝突・ロック・log 書式・--date 決定論。"""
 
 import tempfile
 import unittest
@@ -166,7 +166,7 @@ class TestNewAndLog(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
 
     def test_date_explicit_full_determinism(self):
-        # --date 明示で同一入力 → 同一出力（ツリー全体のバイト一致。NFR-2）
+        # --date 明示で同一入力 → 同一出力（ツリー全体のバイト一致）
         trees = []
         for name in ("a", "b"):
             root = Path(self.tmp.name) / name

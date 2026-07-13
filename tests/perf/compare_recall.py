@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""search vs vsearch/hybrid の再現率比較（Phase 2 完了条件。01 §9、03 §7.3）。
+"""search vs vsearch/hybrid の再現率比較。
 
 固定クエリセット（tests/fixtures/eval-queries.json）で recall@k を計測し、
 Markdown 表を stdout に出す。合否ではなく傾向確認のための計測スクリプト。

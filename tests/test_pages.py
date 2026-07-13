@@ -1,4 +1,4 @@
-"""pages.py: summary 抽出・本文リンク抽出・スキーマ検証の unit test（03 §1、§3.3。T4）。"""
+"""pages.py: summary 抽出・本文リンク抽出・スキーマ検証の unit test。"""
 
 import tempfile
 import unittest

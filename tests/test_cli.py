@@ -1,5 +1,4 @@
-"""CLI 規約: exit code・stdout/stderr 分離・--json の JSONL 妥当性・Phase ゲート
-（03 §4.1、§6.3、04 §1.3。T1・T13）。"""
+"""CLI 規約: exit code・stdout/stderr 分離・--json の JSONL 妥当性。"""
 
 import json
 import tempfile
@@ -36,7 +35,7 @@ class TestExitCodes(unittest.TestCase):
         self.assertEqual(result.stdout, "")
 
     def test_qmd_disabled_exit4(self):
-        # qmd 無効（既定）では vsearch / hybrid のみ exit 4 + 有効化手順（03 §6.3）
+        # qmd 無効（既定）では vsearch / hybrid のみ exit 4 + 有効化手順
         with tempfile.TemporaryDirectory() as tmp:
             for args in (["vsearch", "q"], ["hybrid", "q"]):
                 with self.subTest(args=args):
@@ -101,7 +100,7 @@ class TestStreams(unittest.TestCase):
                 for line in result.stdout.splitlines():
                     record = json.loads(line)  # 不正 JSON なら例外
                     self.assertIsInstance(record, dict)
-                    # キーは辞書順（03 §3.1）
+                    # キーは辞書順
                     self.assertEqual(list(record), sorted(record))
 
 

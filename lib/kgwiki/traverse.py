@@ -1,4 +1,4 @@
-"""kg traverse: adjacency 上の決定論 BFS（基本設計 03 §4.5、詳細設計 04 §4.2）。"""
+"""kg traverse: adjacency 上の決定論 BFS。"""
 
 from . import graph as graph_mod
 from . import layers as layers_mod
@@ -10,7 +10,7 @@ MISSING = "(missing)"
 def load_merged_graph(layer_list, topics):
     """対象層・topic の adjacency を実行時マージする。(out, in, nodes, index, shadow)。
 
-    --topic はエッジの出所 topic の絞り込みであり（03 §3.5）、到達ノードは他 topic
+    --topic はエッジの出所 topic の絞り込みであり、到達ノードは他 topic
     の ref でもよい。したがって adjacency のみ topic で絞り、index（起点解決・
     タイトル/要約の表示）は常に全 topic から引く。
     """
@@ -30,7 +30,7 @@ def load_merged_graph(layer_list, topics):
 
 
 def bfs(out, inn, start: str, max_hops: int, direction: str, rel_filter):
-    """04 §4.2 の擬似コードどおりの BFS。[(ref, hop, parent, rel, direction)]。"""
+    """決定論 BFS。[(ref, hop, parent, rel, direction)] を返す。"""
     from collections import deque
 
     queue = deque([(start, 0, None, None, None)])

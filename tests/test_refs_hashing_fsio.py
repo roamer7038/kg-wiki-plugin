@@ -1,4 +1,4 @@
-"""refs / hashing / fsio の unit test（04 §11、T3）。"""
+"""refs / hashing / fsio の unit test。"""
 
 import hashlib
 import tempfile

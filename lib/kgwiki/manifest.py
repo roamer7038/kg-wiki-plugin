@@ -1,4 +1,4 @@
-"""manifest.json の読み書き（基本設計 03 §3.2）。"""
+"""manifest.json の読み書き。"""
 
 import json
 from pathlib import Path
@@ -22,7 +22,7 @@ def load(derived: Path):
 
 
 def is_current(data) -> bool:
-    """schema_version / tool_version の一致（不一致は全再生成フォールバック。03 §3.2）。"""
+    """schema_version / tool_version の一致（不一致は全再生成フォールバック）。"""
     return (
         data is not None
         and data.get("schema_version") == SCHEMA_VERSION
@@ -31,7 +31,7 @@ def is_current(data) -> bool:
 
 
 def build_manifest(pages_hashes: dict, communities_algorithm: str = None) -> dict:
-    """topic のページハッシュ集合から manifest 内容を構築する（03 §3.2）。"""
+    """topic のページハッシュ集合から manifest 内容を構築する。"""
     shash = hashing.set_hash(pages_hashes)
     derived = {
         "adjacency.json": shash,
@@ -52,6 +52,6 @@ def build_manifest(pages_hashes: dict, communities_algorithm: str = None) -> dic
 
 
 def write(derived: Path, data: dict) -> None:
-    """キー辞書順・インデント 2・生 UTF-8・末尾改行（03 §3.1）でアトミック書き込み。"""
+    """キー辞書順・インデント 2・生 UTF-8・末尾改行でアトミック書き込み。"""
     text = json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     fsio.atomic_write_text(Path(derived) / MANIFEST_NAME, text)

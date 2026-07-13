@@ -1,4 +1,4 @@
-"""パス頑健性: 空白・非 ASCII を含む root での build / 検索（NFR-6。03 §7.2）。"""
+"""パス頑健性: 空白・非 ASCII を含む root での build / 検索。"""
 
 import tempfile
 import unittest

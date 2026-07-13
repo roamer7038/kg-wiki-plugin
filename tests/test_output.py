@@ -1,4 +1,4 @@
-"""output.py: スコア丸め（Decimal・最近接偶数。04 §1.1）の unit test（T1）。"""
+"""output.py: スコア丸め（Decimal・最近接偶数）の unit test。"""
 
 import unittest
 

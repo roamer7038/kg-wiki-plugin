@@ -1,9 +1,9 @@
-"""kg skillgen: Corpus2Skill（基本設計 03 §3.7・§4.14、方式設計 02 §6.7）。
+"""kg skillgen: Corpus2Skill。
 
 生成物は staging（`topics/<topic>/_derived/skills/<name>/SKILL.md`）に置き、
 配置（インストール）と分離する。LLM 執筆領域（description・summary 領域）は
-再生成でも保持する（A-5）。配置は必ず人間のゲートを通す（FR-4.2。承認 UI は
-CLI ではなく /kg-skillgen スキルの固定手順が担う）。
+再生成でも保持する。配置は必ず人間のゲートを通す（承認 UI は CLI ではなく
+kg-skillgen スキルの固定手順が担う）。
 """
 
 import difflib
@@ -19,12 +19,12 @@ LLM_FIELD = "<!-- kg:llm-field -->"
 DESCRIPTION_PLACEHOLDER = f"{LLM_FIELD}（LLM 執筆: 発火条件を含む説明）"
 FM_KEYS = {"name", "description", "built_from", "kg_source"}
 # インストール先の既定。ネスト配置（~/.claude/skills/kg-generated/<name>/）の Skill は
-# 発火しないため、フラット配置とする（04 §10 (c) の実機確認）
+# 発火しないため、フラット配置とする
 DEFAULT_DEST = "~/.claude/skills"
 
 
 def parse_source(text: str):
-    """`topic:<topic>` | `community:<id>` を (kind, value) に解析する（03 §4.14）。"""
+    """`topic:<topic>` | `community:<id>` を (kind, value) に解析する。"""
     kind, _sep, value = text.partition(":")
     if kind not in ("topic", "community") or not value:
         raise UsageError(
@@ -34,7 +34,7 @@ def parse_source(text: str):
 
 
 def default_name(kind: str, topic: str, value: str) -> str:
-    """topic 単位は kg-<topic>、コミュニティ単位は kg-<topic>-<id>（03 §3.7）。"""
+    """topic 単位は kg-<topic>、コミュニティ単位は kg-<topic>-<id>。"""
     return f"kg-{topic}" if kind == "topic" else f"kg-{topic}-{value}"
 
 
@@ -63,7 +63,7 @@ def resolve_target(layer, kind: str, value: str):
 
 
 def source_hash(layer, members) -> str:
-    """ソースページの集合ハッシュ（built_from。03 §3.7）。"""
+    """ソースページの集合ハッシュ（built_from）。"""
     pages = {}
     for ref in members:
         path = layers.page_path(layer, ref)
@@ -74,7 +74,7 @@ def source_hash(layer, members) -> str:
 
 def skill_md_text(name: str, kg_source: str, built_from: str, members, records,
                   description: str, summary_lines) -> str:
-    """生成 SKILL.md（骨格 = 生成、description・summary 領域 = 保持。03 §3.7）。"""
+    """生成 SKILL.md（骨格 = 生成、description・summary 領域 = 保持）。"""
     lines = [
         "---",
         f"name: {name}",
@@ -116,7 +116,7 @@ def existing_llm_regions(path: Path):
 
 
 def is_unwritten(description, summary_lines) -> bool:
-    """未執筆判定（03 §3.7）: プレースホルダ残存、または summary 領域が空。"""
+    """未執筆判定: プレースホルダ残存、または summary 領域が空。"""
     if not isinstance(description, str) or LLM_FIELD in description:
         return True
     return not any(line.strip() for line in (summary_lines or []))
@@ -149,7 +149,7 @@ def dest_dir(dest) -> Path:
 
 
 def install(staged: Path, name: str, dest, dry_run: bool):
-    """(diff 行列, 変更したか)。dry_run なら書き込まない（03 §4.14）。"""
+    """(diff 行列, 変更したか)。dry_run なら書き込まない。"""
     new_text = staged.read_text(encoding="utf-8")
     target = dest_dir(dest) / name / SKILL_NAME
     old_text = target.read_text(encoding="utf-8") if target.is_file() else ""
@@ -161,7 +161,7 @@ def install(staged: Path, name: str, dest, dry_run: bool):
     return diff, True
 
 
-# --- kg validate --skills（03 §3.7・§4.7） ---
+# --- kg validate --skills ---
 
 def iter_staging(layer):
     """層内の staging SKILL.md を (topic, name, path) で列挙する。"""

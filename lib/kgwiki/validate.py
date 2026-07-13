@@ -1,4 +1,4 @@
-"""kg validate: 全 issue コード検査（基本設計 03 §4.7）。"""
+"""kg validate: 全 issue コード検査。"""
 
 from . import community as community_mod
 from . import graph as graph_mod
@@ -28,7 +28,7 @@ def _resolution_refset(cli_root):
 def run_validate(layer_list, topics=None, cli_root=None, skills=False, dest=None):
     """検査を実行し、整列済み Issue リストを返す。
 
-    skills=True で生成 Skill の検査（skill-format / skill-stale）を追加する（03 §4.7）。
+    skills=True で生成 Skill の検査（skill-format / skill-stale）を追加する。
     """
     issues = []
     loaded_layers = []
@@ -156,7 +156,7 @@ def run_validate(layer_list, topics=None, cli_root=None, skills=False, dest=None
                 issues.append(Issue("warn", "derived-stale", target,
                                     "pages/ と manifest の不一致（kg build を実行）"))
 
-    # コミュニティ要約 md の検査（Phase 2。03 §3.6: community-format / community-stale）
+    # コミュニティ要約 md の検査（community-format / community-stale）
     for ld in loaded_layers:
         cfg = ld.config
         topic_names = cfg.topic_names() if cfg is not None else layers.fs_topics(ld.layer.root)
@@ -165,10 +165,10 @@ def run_validate(layer_list, topics=None, cli_root=None, skills=False, dest=None
         for topic in topic_names:
             issues.extend(_community_issues(ld, topic))
 
-    # qmd バージョン逸脱（Phase 2。03 §4.7: qmd-version）
+    # qmd バージョン逸脱（qmd-version）
     issues.extend(_qmd_version_issues(loaded_layers))
 
-    # 生成 Skill（Phase 3。--skills 指定時のみ。03 §3.7: skill-format / skill-stale）
+    # 生成 Skill（--skills 指定時のみ。skill-format / skill-stale）
     if skills:
         issues.extend(run_skills(loaded_layers, dest))
 
@@ -221,7 +221,7 @@ def _community_issues(ld, topic):
                 issues.append(Issue("error", "community-format", target,
                                     "built_from は 'sha256:<hex64>' であること"))
                 built_from = None
-        # stale / 孤児（A-5。04 §5.3: 孤児は community-stale の message で区別）
+        # stale / 孤児（孤児は community-stale の message で区別）
         if cid not in members_by_id:
             issues.append(Issue("warn", "community-stale", target,
                                 "現分割に存在しない旧コミュニティの孤児 md"
@@ -245,7 +245,7 @@ def _community_issues(ld, topic):
 
 
 def run_skills(loaded_layers, dest=None):
-    """生成 Skill の検査（03 §3.7）。staging + インストール先を走査する。"""
+    """生成 Skill の検査。staging + インストール先を走査する。"""
     from . import skillgen
     issues = []
     for ld in loaded_layers:
@@ -259,7 +259,7 @@ def run_skills(loaded_layers, dest=None):
 
 
 def skill_file_issues(path, name, target, loaded_layers):
-    """1 つの生成 SKILL.md の issue（03 §3.7 の検証項目）。"""
+    """1 つの生成 SKILL.md の issue（検証項目）。"""
     from . import skillgen
     issues = []
     text = path.read_text(encoding="utf-8")
@@ -268,12 +268,12 @@ def skill_file_issues(path, name, target, loaded_layers):
     for message in errors:
         issues.append(Issue("error", "skill-format", target, message))
 
-    # 信頼境界の注意書き定型文（完全一致。03 §6.4）
+    # 信頼境界の注意書き定型文（完全一致）
     lines = text.split("\n")
     for notice in TRUST_NOTICE:
         if notice not in lines:
             issues.append(Issue("error", "skill-format", target,
-                                "信頼境界の注意書き定型文がない（03 §6.4 と完全一致）"))
+                                "信頼境界の注意書き定型文がない"))
             break
 
     if fm_lines is None:
@@ -313,13 +313,13 @@ def skill_file_issues(path, name, target, loaded_layers):
     if errors:
         return issues  # 領域が壊れている間は未執筆・stale を判定しない
 
-    # 未執筆の LLM 領域（03 §3.7。--install の事前検証で exit 2 となる条件）
+    # 未執筆の LLM 領域（--install の事前検証で exit 2 となる条件）
     if skillgen.is_unwritten(data.get("description"), summary):
         issues.append(Issue("error", "skill-format", target,
                             "LLM 執筆領域が未執筆（description のプレースホルダ残存、"
                             "または summary 領域が空）"))
 
-    # stale（built_from ≠ 現ソースページの集合ハッシュ。A-5）
+    # stale（built_from ≠ 現ソースページの集合ハッシュ）
     if built_from is not None and kg_source is not None:
         stale, decided = _skill_stale(loaded_layers, kg_source, built_from)
         if decided and stale:
@@ -366,7 +366,7 @@ def _qmd_version_issues(loaded_layers):
 
 
 def run_quick(layer_list, cli_root=None) -> str:
-    """--quick: 鮮度・件数のみの 1 行集約（03 §4.7。常に exit 0 は cli 層が保証）。"""
+    """--quick: 鮮度・件数のみの 1 行集約（常に exit 0 は cli 層が保証）。"""
     total_pages = 0
     n_layers = 0
     stale = False

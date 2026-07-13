@@ -1,4 +1,4 @@
-"""yamlsub: YAML サブセット境界のテーブル駆動テスト（03 §7.2、04 §2。T2）。"""
+"""yamlsub: YAML サブセット境界のテーブル駆動テスト。"""
 
 import datetime
 import unittest

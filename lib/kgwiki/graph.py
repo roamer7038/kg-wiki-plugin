@@ -1,4 +1,4 @@
-"""KG エッジ抽出・graph.tsv・adjacency.json・実行時マージ（03 §3.4〜3.5、04 §4.1）。"""
+"""KG エッジ抽出・graph.tsv・adjacency.json・実行時マージ。"""
 
 import json
 
@@ -13,7 +13,7 @@ ADJ_SCHEMA_VERSION = 1
 
 
 def extract_edges(page):
-    """1 ページのエッジ集合 [(from, rel, to, src)]（重複正規化・辞書順。03 §3.4）。
+    """1 ページのエッジ集合 [(from, rel, to, src)]（重複正規化・辞書順）。
 
     本文リンクは正準形のもののみエッジ化する（逸脱は kg validate の ref-format が
     検出する）。
@@ -45,7 +45,7 @@ def parse_graph_tsv(text: str):
 
 
 def adjacency_data(edges, index_refs) -> dict:
-    """topic の graph エッジ + index の全 ref から adjacency を構築する（03 §3.5）。"""
+    """topic の graph エッジ + index の全 ref から adjacency を構築する。"""
     nodes = set(index_refs)
     out = {}
     inn = {}
@@ -75,7 +75,7 @@ def load_adjacency(path):
 
 
 def merge_adjacencies(layer_adjs, shadow):
-    """実行時マージ（04 §4.1）。layer_adjs = [(kind, adj_dict), ...]。
+    """実行時マージ。layer_adjs = [(kind, adj_dict), ...]。
 
     from 基準規則: from（in 方向はエントリの相手 = from）が shadow ref に属する
     グローバル層のエッジは捨て、それ以外は和集合。(out, in, nodes) を返す。
@@ -94,7 +94,7 @@ def merge_adjacencies(layer_adjs, shadow):
         for ref, pairs in adj.get("in", {}).items():
             for rel, from_ref in pairs:
                 if kind == GLOBAL and from_ref in shadow:
-                    continue  # in 方向にも from 基準を適用（03 §2.3）
+                    continue  # in 方向にも from 基準を適用
                 inn.setdefault(ref, set()).add((rel, from_ref))
     out_sorted = {ref: sorted(pairs) for ref, pairs in out.items() if pairs}
     in_sorted = {ref: sorted(pairs) for ref, pairs in inn.items() if pairs}
@@ -102,7 +102,7 @@ def merge_adjacencies(layer_adjs, shadow):
 
 
 def get_neighbors(out, inn, node_ref, direction="both", rel_filter=None):
-    """BFS 用の決定論的隣接列挙（04 §4.2。out → in、各 (rel, 相手) 辞書順）。"""
+    """BFS 用の決定論的隣接列挙（out → in、各 (rel, 相手) 辞書順）。"""
     neighbors = []
     if direction in ("both", "out"):
         for rel, to_ref in out.get(node_ref, ()):

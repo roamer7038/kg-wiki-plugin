@@ -1,4 +1,4 @@
-"""ページ参照（ref）の解析・検証（基本設計 03 §2.3、DR-7）。
+"""ページ参照（ref）の解析・検証。
 
 正準形は <topic>/<type>/<slug>、各要素は [a-z0-9-]+。これ以外の形式は認めない。
 """
@@ -28,7 +28,7 @@ def is_canonical(text: str) -> bool:
 
 
 def parse_ref(text: str) -> Ref:
-    """正準 ref を解析する。失敗時は RefFormatError（04 §1.2）。"""
+    """正準 ref を解析する。失敗時は RefFormatError。"""
     if not isinstance(text, str):
         raise RefFormatError(f"ref が文字列でない: {text!r}")
     m = REF_RE.match(text)

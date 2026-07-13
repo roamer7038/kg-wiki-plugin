@@ -1,7 +1,7 @@
-"""qmd 連携: 縮退（exit 4）・チャンク→ref 写像・コレクション命名（02 §2.3、04 §8。Phase 2）。
+"""qmd 連携: 縮退（exit 4）・チャンク→ref 写像・コレクション命名。
 
 写像テストは qmd 出力フィクスチャ（JSON）に対して行い、qmd 実体を必要としない
-（03 §7.2「qmd 写像」）。
+qmd 本体は呼ばない。
 """
 
 import json
@@ -18,7 +18,7 @@ from kgwiki.layers import Layer
 
 class TestDegrade(unittest.TestCase):
     def test_enabled_but_qmd_absent_exit4(self):
-        # config で有効化しても PATH に qmd が無ければ exit 4（AND 条件。02 §2.3）
+        # config で有効化しても PATH に qmd が無ければ exit 4（AND 条件）
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "w"
             run_kg(["init", "--layer", "global", "--topic", "llm"], root=root)
@@ -49,7 +49,7 @@ class TestDegrade(unittest.TestCase):
             self.assertIn("有効化", result.stderr)
 
     def test_other_commands_unaffected(self):
-        # qmd 不在でも他コマンドは無影響（03 §6.3）
+        # qmd 不在でも他コマンドは無影響
         with tempfile.TemporaryDirectory() as tmp:
             fix = copy_fixture("wiki-mini", Path(tmp))
             env = clean_env(project_dir=fix / "project")
@@ -76,11 +76,11 @@ class TestMapping(unittest.TestCase):
                              ["llm/concepts/graphrag", "llm/concepts/rag",
                               "llm/papers/lightrag"])
             self.assertEqual(dict(refs)["llm/concepts/graphrag"], 0.92)
-            # パターン外・非正準 slug は破棄（04 §8.3）
+            # パターン外・非正準 slug は破棄
             self.assertEqual(len(unmapped), 2)
 
     def test_snippet_not_leaked(self):
-        # 写像結果に本文スニペットを含めない（A-7）
+        # 写像結果に本文スニペットを含めない
         with tempfile.TemporaryDirectory() as tmp:
             mapped, _ = qmdfacade.map_results(self.items(Path(tmp)),
                                               [("global", Path(tmp))])
