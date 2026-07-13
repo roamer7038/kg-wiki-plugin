@@ -11,12 +11,9 @@ from . import __version__
 from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
                      ValidationFailure)
 
-CURRENT_PHASE = 2
-PHASE_GATE = {
-    "pack": (3, "コンテキストパックは Phase 3 で提供予定"),
-    "skillgen": (3, "Corpus2Skill 生成は Phase 3 で提供予定"),
-    "hook-context": (3, "hook 注入は Phase 3 で提供予定"),
-}
+CURRENT_PHASE = 3
+# 未実装 Phase のサブコマンド → exit 4（03 §4.1）。Phase 3 時点で該当なし
+PHASE_GATE = {}
 
 
 class _ArgParser(argparse.ArgumentParser):
@@ -24,12 +21,13 @@ class _ArgParser(argparse.ArgumentParser):
         raise UsageError(f"{message}\n{self.format_usage().rstrip()}")
 
 
-def _add_common(p, write=False, limit_default=10, with_limit=True,
+def _add_common(p, write=False, limit_default=10, with_limit=True, with_json=True,
                 layer_choices=("global", "project", "all")):
     p.add_argument("--root", metavar="PATH", help="グローバル層ルートの明示")
     p.add_argument("--layer", choices=list(layer_choices), default=None)
     p.add_argument("--topic", metavar="T[,T...]", default=None)
-    p.add_argument("--json", action="store_true")
+    if with_json:
+        p.add_argument("--json", action="store_true")
     if with_limit:
         p.add_argument("--limit", type=int, default=limit_default, metavar="N")
     p.add_argument("--quiet", action="store_true")
@@ -111,6 +109,28 @@ def build_parser():
     sp.add_argument("ref", nargs="?", default=None)
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
+
+    # プロンプトは stdin の hook JSON からのみ読む（引数化しない。02 §6.6）
+    sp = sub.add_parser("hook-context", help="UserPromptSubmit hook 用の軽量注入")
+    sp.add_argument("--root", metavar="PATH")
+    sp.add_argument("--debug", action="store_true")
+
+    sp = sub.add_parser("skillgen", help="生成 Skill の作成（staging）・配置")
+    sp.add_argument("source", metavar="topic:<topic> | community:<id>")
+    sp.add_argument("--name", default=None, metavar="N")
+    sp.add_argument("--install", action="store_true")
+    sp.add_argument("--dest", default=None, metavar="DIR")
+    sp.add_argument("--dry-run", action="store_true", dest="dry_run")
+    _add_common(sp, write=True, with_limit=False, with_json=False,
+                layer_choices=("global", "project"))
+
+    sp = sub.add_parser("pack", help="コンテキストパックの生成")
+    sp.add_argument("args", nargs="*", metavar="<query> | <ref>...")
+    sp.add_argument("--hops", type=int, default=1, metavar="N")
+    sp.add_argument("--max-bytes", type=int, default=None, dest="max_bytes",
+                    metavar="B")
+    sp.add_argument("--out", default=None, metavar="FILE")
+    _add_common(sp, with_json=False)
 
     sp = sub.add_parser("log", help="log.md への追記（ingest 記録）")
     sp.add_argument("op")
@@ -284,8 +304,6 @@ def cmd_path(args):
 
 def cmd_validate(args):
     from . import validate
-    if args.skills:
-        raise FeatureDisabledError("--skills（生成 Skill 検査）は Phase 3 で提供予定")
     if args.quick:
         try:
             print(validate.run_quick(_read_layers(args), cli_root=args.root))
@@ -293,7 +311,7 @@ def cmd_validate(args):
             pass
         return 0
     issues = validate.run_validate(_read_layers(args), topics=_topics(args),
-                                   cli_root=args.root)
+                                   cli_root=args.root, skills=args.skills)
     _print_issues(issues, args.json)
     return 2 if any(i.severity == "error" for i in issues) else 0
 
@@ -436,6 +454,102 @@ def cmd_community(args):
     return 0
 
 
+def cmd_hook_context(args):
+    """hook 専用: 常に exit 0（空出力で正常終了する。03 §4.1・§4.15）。"""
+    import time
+    start = time.monotonic()
+    try:
+        from . import hookctx
+        text = hookctx.run(sys.stdin.read(), cli_root=args.root, start=start)
+    except Exception as e:  # 内部エラーも空出力 exit 0（stderr に診断のみ）
+        print(f"kg hook-context: 診断: {e}", file=sys.stderr)
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return 0
+    if text:
+        sys.stdout.write(text)
+    return 0
+
+
+def cmd_skillgen(args):
+    from . import fsio, layers, oplog, skillgen, validate
+    if args.dry_run and not args.install:
+        raise UsageError("--dry-run は --install と併用すること")
+    kind, value = skillgen.parse_source(args.source)
+    layer = _write_layer(args)
+    date = _parse_date(args.date)
+
+    with fsio.RootLock(layer.root, "skillgen"):
+        path, name, topic = skillgen.generate(layer, kind, value, args.name)
+        if not args.install:
+            oplog.append(layer.root, oplog.format_line(
+                date, "skillgen",
+                f"{kind}:{value} → {path.parent.relative_to(layer.root)}"))
+            print(path)
+            return 0
+
+        # --install: 当該 Skill の事前検証（03 §4.14。エラーがあれば exit 2）
+        loaded = [layers.load_layer(layer, topics=[topic])]
+        target = f"{layer.kind}:{topic}/skills/{name}"
+        issues = validate.skill_file_issues(path, name, target, loaded)
+        errors = [i for i in issues if i.severity == "error"]
+        if errors:
+            _print_issues(validate.sort_issues(issues), False)
+            raise ValidationFailure(
+                "生成 Skill の検証に失敗（LLM 執筆領域を埋めてから再実行する）")
+
+        diff, changed = skillgen.install(path, name, args.dest, args.dry_run)
+        for line in diff:
+            print(line)
+        if args.dry_run:
+            if not args.quiet:
+                print("kg skillgen: --dry-run のため変更していない"
+                      "（差分を承認のうえ --install で配置する）", file=sys.stderr)
+            return 0
+        installed = skillgen.dest_dir(args.dest) / name
+        if changed:
+            oplog.append(layer.root, oplog.format_line(
+                date, "skill-install", f"{name} → {installed}"))
+        elif not args.quiet:
+            print("kg skillgen: 配置先は staging と同一（変更なし）", file=sys.stderr)
+        if not args.quiet:
+            print(f"kg skillgen: {installed} に配置した", file=sys.stderr)
+        return 0
+
+
+def cmd_pack(args):
+    from . import fsio, pack
+    if not args.args:
+        raise UsageError("usage: kg pack (<query> | <ref>...)")
+    if not 1 <= args.hops <= 6:
+        raise UsageError("--hops は 1〜6 であること")
+    if args.limit < 1:
+        raise UsageError("--limit は 1 以上であること")
+    if args.max_bytes is not None and args.max_bytes < 1:
+        raise UsageError("--max-bytes は 1 以上であること")
+
+    text, _omitted, over_budget = pack.run_pack(
+        args.args, _read_layers(args), _topics(args), args.hops, args.limit,
+        args.max_bytes)
+    if text is None:
+        raise KgError("収集対象が 0 件（クエリ・ref を見直す）")
+    if over_budget:
+        # 省略一覧のバイトも計上するため、極端に小さい上限では最小出力が上限を超える。
+        # 打ち切らずに出力し警告のみとする（決定論を優先。04 §7.2）
+        print(f"kg pack: 警告: 出力が上限超過（--max-bytes {args.max_bytes} に対し "
+              f"{len(text.encode('utf-8'))} バイト）。省略一覧のバイト計上のため打ち切らない",
+              file=sys.stderr)
+    if args.out:
+        from pathlib import Path
+        fsio.atomic_write_text(Path(args.out).expanduser(), text)
+        if not args.quiet:
+            print(f"kg pack: {args.out} に書き出した", file=sys.stderr)
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
 def cmd_log(args):
     from . import fsio, layers, oplog
     if args.op != oplog.LOG_CMD_OP:
@@ -470,6 +584,9 @@ HANDLERS = {
     "move": cmd_move,
     "new": cmd_new,
     "log": cmd_log,
+    "pack": cmd_pack,
+    "skillgen": cmd_skillgen,
+    "hook-context": cmd_hook_context,
     "vsearch": cmd_vsearch,
     "hybrid": cmd_hybrid,
     "community": cmd_community,

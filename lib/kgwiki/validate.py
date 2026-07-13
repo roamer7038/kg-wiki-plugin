@@ -5,8 +5,9 @@ from . import graph as graph_mod
 from . import hashing, layers, manifest, yamlsub
 from . import pages as pages_mod
 from . import refs as refs_mod
+from .errors import KgError
 from .layers import GLOBAL, PROJECT
-from .output import Issue, sort_issues
+from .output import TRUST_NOTICE, Issue, sort_issues
 
 DERIVED_FILES = ("manifest.json", "index.jsonl", "index.md", "graph.tsv",
                  "adjacency.json", "communities/assignment.json")
@@ -24,8 +25,11 @@ def _resolution_refset(cli_root):
     return refset
 
 
-def run_validate(layer_list, topics=None, cli_root=None):
-    """検査を実行し、整列済み Issue リストを返す。"""
+def run_validate(layer_list, topics=None, cli_root=None, skills=False, dest=None):
+    """検査を実行し、整列済み Issue リストを返す。
+
+    skills=True で生成 Skill の検査（skill-format / skill-stale）を追加する（03 §4.7）。
+    """
     issues = []
     loaded_layers = []
 
@@ -164,6 +168,10 @@ def run_validate(layer_list, topics=None, cli_root=None):
     # qmd バージョン逸脱（Phase 2。03 §4.7: qmd-version）
     issues.extend(_qmd_version_issues(loaded_layers))
 
+    # 生成 Skill（Phase 3。--skills 指定時のみ。03 §3.7: skill-format / skill-stale）
+    if skills:
+        issues.extend(run_skills(loaded_layers, dest))
+
     return sort_issues(issues)
 
 
@@ -234,6 +242,110 @@ def _community_issues(ld, topic):
                                 "built_from が現所属ページの集合ハッシュと不一致"
                                 "（kg build と要約の再執筆を検討）"))
     return issues
+
+
+def run_skills(loaded_layers, dest=None):
+    """生成 Skill の検査（03 §3.7）。staging + インストール先を走査する。"""
+    from . import skillgen
+    issues = []
+    for ld in loaded_layers:
+        for topic, name, path in skillgen.iter_staging(ld.layer):
+            target = f"{ld.layer.kind}:{topic}/skills/{name}"
+            issues.extend(skill_file_issues(path, name, target, loaded_layers))
+    for name, path in skillgen.iter_installed(dest):
+        issues.extend(skill_file_issues(path, name, str(path.parent),
+                                        loaded_layers))
+    return issues
+
+
+def skill_file_issues(path, name, target, loaded_layers):
+    """1 つの生成 SKILL.md の issue（03 §3.7 の検証項目）。"""
+    from . import skillgen
+    issues = []
+    text = path.read_text(encoding="utf-8")
+
+    fm_lines, _sk, summary, errors = community_mod.parse_community_md(text)
+    for message in errors:
+        issues.append(Issue("error", "skill-format", target, message))
+
+    # 信頼境界の注意書き定型文（完全一致。03 §6.4）
+    lines = text.split("\n")
+    for notice in TRUST_NOTICE:
+        if notice not in lines:
+            issues.append(Issue("error", "skill-format", target,
+                                "信頼境界の注意書き定型文がない（03 §6.4 と完全一致）"))
+            break
+
+    if fm_lines is None:
+        return issues
+    data, yaml_issues = yamlsub.parse_mapping_lines(fm_lines, first_lineno=2)
+    for yi in yaml_issues:
+        issues.append(Issue("error", "skill-format", target,
+                            f"L{yi.line}: {yi.message}"))
+    unknown = set(data) - skillgen.FM_KEYS
+    missing = skillgen.FM_KEYS - set(data)
+    if unknown:
+        issues.append(Issue("error", "skill-format", target,
+                            f"未知キー: {', '.join(sorted(unknown))}"))
+    if missing:
+        issues.append(Issue("error", "skill-format", target,
+                            f"必須キーの欠落: {', '.join(sorted(missing))}"))
+    if "name" in data and data["name"] != name:
+        issues.append(Issue("error", "skill-format", target,
+                            f"name '{data['name']}' がディレクトリ名 '{name}' と"
+                            "一致しない"))
+    built_from = data.get("built_from")
+    if built_from is not None and not (isinstance(built_from, str)
+                                       and built_from.startswith("sha256:")):
+        issues.append(Issue("error", "skill-format", target,
+                            "built_from は 'sha256:<hex64>' であること"))
+        built_from = None
+    kg_source = data.get("kg_source")
+    if kg_source is not None and not (
+            isinstance(kg_source, str)
+            and kg_source.partition(":")[0] in ("topic", "community")
+            and kg_source.partition(":")[2]):
+        issues.append(Issue("error", "skill-format", target,
+                            "kg_source は 'topic:<topic>' または 'community:<id>' "
+                            "であること"))
+        kg_source = None
+
+    if errors:
+        return issues  # 領域が壊れている間は未執筆・stale を判定しない
+
+    # 未執筆の LLM 領域（03 §3.7。--install の事前検証で exit 2 となる条件）
+    if skillgen.is_unwritten(data.get("description"), summary):
+        issues.append(Issue("error", "skill-format", target,
+                            "LLM 執筆領域が未執筆（description のプレースホルダ残存、"
+                            "または summary 領域が空）"))
+
+    # stale（built_from ≠ 現ソースページの集合ハッシュ。A-5）
+    if built_from is not None and kg_source is not None:
+        stale, decided = _skill_stale(loaded_layers, kg_source, built_from)
+        if decided and stale:
+            issues.append(Issue("warn", "skill-stale", target,
+                                "built_from が現ソースページの集合ハッシュと不一致"
+                                "（kg skillgen で再生成し、要約を再執筆する）"))
+    return issues
+
+
+def _skill_stale(loaded_layers, kg_source, built_from):
+    """(stale か, 判定できたか)。ソースを解決できない層は判定しない。"""
+    from . import skillgen
+    kind, _sep, value = kg_source.partition(":")
+    for ld in loaded_layers:
+        try:
+            _topic, members = skillgen.resolve_target(ld.layer, kind, value)
+        except KgError:
+            continue
+        current = {}
+        for ref in members:
+            page = ld.pages.get(ref)
+            if page is None:
+                return True, True  # ソースページが消えた
+            current[ref] = page.hash
+        return hashing.set_hash(current) != built_from, True
+    return False, False
 
 
 def _qmd_version_issues(loaded_layers):

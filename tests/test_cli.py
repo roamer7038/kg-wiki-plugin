@@ -30,13 +30,10 @@ class TestExitCodes(unittest.TestCase):
         result = run_kg([])
         self.assertEqual(result.returncode, 3)
 
-    def test_phase_gates_exit4(self):
-        for args in (["pack", "q"], ["skillgen", "topic:llm"], ["hook-context"]):
-            with self.subTest(args=args):
-                result = run_kg(args)
-                self.assertEqual(result.returncode, 4, result.stderr)
-                self.assertIn("Phase", result.stderr)
-                self.assertEqual(result.stdout, "")
+    def test_unknown_subcommand_exit3(self):
+        result = run_kg(["nosuchcmd"])
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(result.stdout, "")
 
     def test_qmd_disabled_exit4(self):
         # qmd 無効（既定）では vsearch / hybrid のみ exit 4 + 有効化手順（03 §6.3）
