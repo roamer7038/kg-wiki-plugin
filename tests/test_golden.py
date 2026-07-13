@@ -83,6 +83,18 @@ class TestGolden(unittest.TestCase):
                     self.assertEqual(first.stdout,
                                      golden_path.read_text(encoding="utf-8"), name)
 
+    def test_topic_filter_keeps_cross_topic_display(self):
+        # --topic はエッジの出所絞り込み。到達した他 topic ノードは (missing) では
+        # なく実ページとして表示される（03 §3.5、監査指摘①の回帰テスト）
+        result = self.run_cmd(["traverse", "tools/concepts/qmd", "--topic", "tools"])
+        self.assertIn("llm/concepts/vector-search]]\tベクトル検索", result.stdout)
+        self.assertNotIn("(missing)", result.stdout)
+        # 起点が --topic 外でもエッジ出所の絞り込みとして機能する
+        result = self.run_cmd(["traverse", "llm/concepts/vector-search",
+                               "--topic", "tools", "--direction", "in"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("tools/concepts/qmd", result.stdout)
+
     def test_shadow_edge_replacement(self):
         # shadow ページの出エッジ置換: project 版の uses→knowledge-graph のみ辿れる
         result = self.run_cmd(["traverse", "llm/concepts/shadowed",

@@ -8,8 +8,13 @@ MISSING = "(missing)"
 
 
 def load_merged_graph(layer_list, topics):
-    """対象層・topic の adjacency を実行時マージする。(out, in, nodes, index, shadow)。"""
-    layer_records = [(ly.kind, layers_mod.load_index_records(ly, topics))
+    """対象層・topic の adjacency を実行時マージする。(out, in, nodes, index, shadow)。
+
+    --topic はエッジの出所 topic の絞り込みであり（03 §3.5）、到達ノードは他 topic
+    の ref でもよい。したがって adjacency のみ topic で絞り、index（起点解決・
+    タイトル/要約の表示）は常に全 topic から引く。
+    """
+    layer_records = [(ly.kind, layers_mod.load_index_records(ly, topics=None))
                      for ly in layer_list]
     merged_index, shadow = layers_mod.merge_index(layer_records)
     layer_adjs = []
