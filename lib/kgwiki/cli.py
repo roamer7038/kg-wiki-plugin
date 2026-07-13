@@ -12,9 +12,8 @@ from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
                      ValidationFailure)
 
 CURRENT_PHASE = 3
-PHASE_GATE = {
-    "hook-context": (3, "hook 注入は Phase 3 で提供予定"),
-}
+# 未実装 Phase のサブコマンド → exit 4（03 §4.1）。Phase 3 時点で該当なし
+PHASE_GATE = {}
 
 
 class _ArgParser(argparse.ArgumentParser):
@@ -110,6 +109,11 @@ def build_parser():
     sp.add_argument("ref", nargs="?", default=None)
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
+
+    # プロンプトは stdin の hook JSON からのみ読む（引数化しない。02 §6.6）
+    sp = sub.add_parser("hook-context", help="UserPromptSubmit hook 用の軽量注入")
+    sp.add_argument("--root", metavar="PATH")
+    sp.add_argument("--debug", action="store_true")
 
     sp = sub.add_parser("skillgen", help="生成 Skill の作成（staging）・配置")
     sp.add_argument("source", metavar="topic:<topic> | community:<id>")
@@ -450,6 +454,24 @@ def cmd_community(args):
     return 0
 
 
+def cmd_hook_context(args):
+    """hook 専用: 常に exit 0（空出力で正常終了する。03 §4.1・§4.15）。"""
+    import time
+    start = time.monotonic()
+    try:
+        from . import hookctx
+        text = hookctx.run(sys.stdin.read(), cli_root=args.root, start=start)
+    except Exception as e:  # 内部エラーも空出力 exit 0（stderr に診断のみ）
+        print(f"kg hook-context: 診断: {e}", file=sys.stderr)
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        return 0
+    if text:
+        sys.stdout.write(text)
+    return 0
+
+
 def cmd_skillgen(args):
     from . import fsio, layers, oplog, skillgen, validate
     if args.dry_run and not args.install:
@@ -564,6 +586,7 @@ HANDLERS = {
     "log": cmd_log,
     "pack": cmd_pack,
     "skillgen": cmd_skillgen,
+    "hook-context": cmd_hook_context,
     "vsearch": cmd_vsearch,
     "hybrid": cmd_hybrid,
     "community": cmd_community,
