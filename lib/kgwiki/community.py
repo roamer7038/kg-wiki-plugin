@@ -19,7 +19,6 @@ MARK_SK_BEGIN = "<!-- kg:skeleton:begin -->"
 MARK_SK_END = "<!-- kg:skeleton:end -->"
 MARK_SU_BEGIN = "<!-- kg:summary:begin -->"
 MARK_SU_END = "<!-- kg:summary:end -->"
-ID_RE = re.compile(r"^c-[0-9a-f]{8}$")
 
 
 # --- 検出（04 §5.1） ---

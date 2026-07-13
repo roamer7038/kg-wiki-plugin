@@ -18,8 +18,6 @@ from .output import Issue
 from .scaffold import new_page_issues
 
 TO_LINE_RE = re.compile(r"^(\s*(?:- )?to: )([\"']?)(.+?)\2(\s*)$")
-TYPE_LINE_RE = re.compile(r"^type: .*$", re.MULTILINE)
-SLUG_LINE_RE = re.compile(r"^slug: .*$", re.MULTILINE)
 
 
 # --- テキストレベルの参照書換（04 §6.2） ---

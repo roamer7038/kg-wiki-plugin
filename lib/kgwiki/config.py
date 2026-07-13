@@ -1,6 +1,5 @@
 """config.yml の読み込み・検証・生成（基本設計 03 §2.2）。"""
 
-import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -124,14 +123,6 @@ def load_config(root: Path):
                     config.qmd_version_range = version_range
 
     return config, issues, True
-
-
-def qmd_effectively_enabled(config) -> bool:
-    """qmd 有効判定の設定値解決（02 §2.3: 環境変数 > config > 既定 false）。"""
-    env = os.environ.get("CLAUDE_PLUGIN_OPTION_ENABLE_QMD")
-    if env is not None:
-        return env.strip().lower() in ("1", "true", "yes", "on")
-    return bool(config and config.qmd_enabled)
 
 
 def initial_config_text(topic_names) -> str:
