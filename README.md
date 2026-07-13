@@ -1,7 +1,7 @@
 # kg-wiki
 
 Markdown 知識リポジトリ + 派生ナレッジグラフによる Claude Code 知識管理プラグイン。
-設計文書は [kg-wiki-specs](../kg-wiki-specs) を参照（本リポジトリは Phase 1 実装）。
+設計文書は [kg-wiki-specs](../kg-wiki-specs) を参照（本リポジトリは Phase 1・2 実装）。
 
 ## 構成
 
@@ -28,6 +28,9 @@ kg traverse llm/concepts/rag --hops 2
 kg path llm/concepts/a llm/concepts/b
 kg validate
 kg move llm/concepts/rag llm/concepts/vanilla-rag --dry-run
+kg community llm/concepts/rag        # 所属コミュニティと俯瞰要約
+kg vsearch "曖昧な意味のクエリ"      # 要 qmd（無効・不在時は exit 4）
+kg hybrid "曖昧な意味のクエリ"       # 要 qmd
 ```
 
 CLI の実体は `${CLAUDE_PLUGIN_ROOT}/bin/kg`（Python 3.10+ 標準ライブラリのみ、
@@ -55,8 +58,8 @@ permissions を併用する（方式設計 02 §6.5）:
 | キー | 既定 | 用途 |
 |---|---|---|
 | `wiki_root` | `~/kg-wiki` | グローバル層ルート（環境変数 `KG_WIKI_ROOT` でも指定可） |
-| `enable_hook_context` | true | UserPromptSubmit 軽量注入（Phase 3 で有効化） |
-| `enable_qmd` | false | qmd 委譲のベクトル検索（Phase 2 で有効化） |
+| `enable_hook_context` | true | UserPromptSubmit 軽量注入（Phase 3 で実装予定） |
+| `enable_qmd` | false | qmd 委譲のベクトル/ハイブリッド検索（`kg init --with-qmd` が設定する。環境変数 `CLAUDE_PLUGIN_OPTION_ENABLE_QMD` が優先） |
 
 ## テスト
 
@@ -74,7 +77,8 @@ claude plugin validate --strict .             # プラグイン検証
 - **Phase 2（拡張検索）**: コミュニティ検出（CNM・決定論）と `kg community`、
   qmd 委譲の `kg vsearch` / `kg hybrid`（qmd 無効・不在時は exit 4、他機能は
   無影響）、`kg init --with-qmd`。検索品質の計測記録は
-  `docs/phase2-search-eval.md`（qmd 実機確認後に vsearch/hybrid 列を追記）。
+  `docs/phase2-search-eval.md`（qmd 2.5.3 実機での recall@10: 曖昧・意味系で
+  search 0.85 に対し vsearch 0.95 / hybrid 0.90）。
 - **Phase 3**: `pack` / `skillgen` / `hook-context` は exit 4（機能無効）。
   hooks.json は Phase 3 で同梱する（未実装コマンドのノイズ回避。02 §6.6）。
 
