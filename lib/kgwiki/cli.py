@@ -13,7 +13,6 @@ from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
 
 CURRENT_PHASE = 3
 PHASE_GATE = {
-    "skillgen": (3, "Corpus2Skill 生成は Phase 3 で提供予定"),
     "hook-context": (3, "hook 注入は Phase 3 で提供予定"),
 }
 
@@ -111,6 +110,15 @@ def build_parser():
     sp.add_argument("ref", nargs="?", default=None)
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
+
+    sp = sub.add_parser("skillgen", help="生成 Skill の作成（staging）・配置")
+    sp.add_argument("source", metavar="topic:<topic> | community:<id>")
+    sp.add_argument("--name", default=None, metavar="N")
+    sp.add_argument("--install", action="store_true")
+    sp.add_argument("--dest", default=None, metavar="DIR")
+    sp.add_argument("--dry-run", action="store_true", dest="dry_run")
+    _add_common(sp, write=True, with_limit=False, with_json=False,
+                layer_choices=("global", "project"))
 
     sp = sub.add_parser("pack", help="コンテキストパックの生成")
     sp.add_argument("args", nargs="*", metavar="<query> | <ref>...")
@@ -292,8 +300,6 @@ def cmd_path(args):
 
 def cmd_validate(args):
     from . import validate
-    if args.skills:
-        raise FeatureDisabledError("--skills（生成 Skill 検査）は Phase 3 で提供予定")
     if args.quick:
         try:
             print(validate.run_quick(_read_layers(args), cli_root=args.root))
@@ -301,7 +307,7 @@ def cmd_validate(args):
             pass
         return 0
     issues = validate.run_validate(_read_layers(args), topics=_topics(args),
-                                   cli_root=args.root)
+                                   cli_root=args.root, skills=args.skills)
     _print_issues(issues, args.json)
     return 2 if any(i.severity == "error" for i in issues) else 0
 
@@ -444,6 +450,52 @@ def cmd_community(args):
     return 0
 
 
+def cmd_skillgen(args):
+    from . import fsio, layers, oplog, skillgen, validate
+    if args.dry_run and not args.install:
+        raise UsageError("--dry-run は --install と併用すること")
+    kind, value = skillgen.parse_source(args.source)
+    layer = _write_layer(args)
+    date = _parse_date(args.date)
+
+    with fsio.RootLock(layer.root, "skillgen"):
+        path, name, topic = skillgen.generate(layer, kind, value, args.name)
+        if not args.install:
+            oplog.append(layer.root, oplog.format_line(
+                date, "skillgen",
+                f"{kind}:{value} → {path.parent.relative_to(layer.root)}"))
+            print(path)
+            return 0
+
+        # --install: 当該 Skill の事前検証（03 §4.14。エラーがあれば exit 2）
+        loaded = [layers.load_layer(layer, topics=[topic])]
+        target = f"{layer.kind}:{topic}/skills/{name}"
+        issues = validate.skill_file_issues(path, name, target, loaded)
+        errors = [i for i in issues if i.severity == "error"]
+        if errors:
+            _print_issues(validate.sort_issues(issues), False)
+            raise ValidationFailure(
+                "生成 Skill の検証に失敗（LLM 執筆領域を埋めてから再実行する）")
+
+        diff, changed = skillgen.install(path, name, args.dest, args.dry_run)
+        for line in diff:
+            print(line)
+        if args.dry_run:
+            if not args.quiet:
+                print("kg skillgen: --dry-run のため変更していない"
+                      "（差分を承認のうえ --install で配置する）", file=sys.stderr)
+            return 0
+        installed = skillgen.dest_dir(args.dest) / name
+        if changed:
+            oplog.append(layer.root, oplog.format_line(
+                date, "skill-install", f"{name} → {installed}"))
+        elif not args.quiet:
+            print("kg skillgen: 配置先は staging と同一（変更なし）", file=sys.stderr)
+        if not args.quiet:
+            print(f"kg skillgen: {installed} に配置した", file=sys.stderr)
+        return 0
+
+
 def cmd_pack(args):
     from . import fsio, pack
     if not args.args:
@@ -511,6 +563,7 @@ HANDLERS = {
     "new": cmd_new,
     "log": cmd_log,
     "pack": cmd_pack,
+    "skillgen": cmd_skillgen,
     "vsearch": cmd_vsearch,
     "hybrid": cmd_hybrid,
     "community": cmd_community,

@@ -31,7 +31,7 @@ class TestExitCodes(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
 
     def test_phase_gates_exit4(self):
-        for args in (["skillgen", "topic:llm"], ["hook-context"]):
+        for args in (["hook-context"],):
             with self.subTest(args=args):
                 result = run_kg(args)
                 self.assertEqual(result.returncode, 4, result.stderr)

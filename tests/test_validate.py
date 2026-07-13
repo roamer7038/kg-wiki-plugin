@@ -94,11 +94,6 @@ class TestIssueCodes(unittest.TestCase):
                             root=fix / "global", project_dir=Path(tmp) / "noproj")
             self.assertEqual(result.returncode, 0)
 
-    def test_skills_gate_exit4(self):
-        result = run_kg(["validate", "--skills"],
-                        root=FIXTURES / "invalid" / "page-orphan" / "global")
-        self.assertEqual(result.returncode, 4)
-
 
 if __name__ == "__main__":
     unittest.main()
