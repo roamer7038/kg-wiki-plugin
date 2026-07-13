@@ -438,8 +438,11 @@ def cmd_community(args):
 
 def cmd_log(args):
     from . import fsio, layers, oplog
-    if args.op != "ingest":
-        raise UsageError("kg log の op は ingest のみ（03 §4.10）")
+    if args.op != oplog.LOG_CMD_OP:
+        others = ", ".join(op for op in oplog.OPS if op != oplog.LOG_CMD_OP)
+        raise UsageError(
+            f"kg log の op は {oplog.LOG_CMD_OP} のみ"
+            f"（{others} は各コマンドが自身で記録する。03 §4.10）")
     _check_ref_arg(args.ref)
     date = _parse_date(args.date)
     if args.layer in ("global", "project"):

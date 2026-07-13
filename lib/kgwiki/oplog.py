@@ -11,7 +11,10 @@ from .errors import KgError
 from .layers import scan_page_refs
 
 LOG_NAME = "log.md"
-VALID_OPS = ("init", "new", "ingest", "move", "skillgen", "skill-install")
+# 03 §2.4 の op 一覧。kg log が受け付けるのは ingest のみで、他は各コマンドが
+# 自身で記録する（§4.10）
+OPS = ("init", "new", "ingest", "move", "skillgen", "skill-install")
+LOG_CMD_OP = "ingest"
 
 
 def format_line(date, op: str, target: str, detail: str = None) -> str:
