@@ -76,6 +76,12 @@ def build_topic(layer, cfg, topic: str, full: bool) -> TopicResult:
             elif rec.get("layer") != layer.kind:
                 to_parse.add(ref)  # 層の複製（03 §3.3）→ 変更扱い
                 layer_changed.append(ref)
+            elif rec.get("type") not in cfg.types or any(
+                    rel != graph.MENTIONS and rel not in cfg.relations
+                    for _f, rel, _t, _s in old_edges_by_from.get(ref, ())):
+                # config 変更（使用中 type/rel の削除等）→ 再検証して全再生成と
+                # 同じ中断挙動にする（NFR-1 の増分・全再生成一致）
+                to_parse.add(ref)
     else:
         to_parse = set(current)
 

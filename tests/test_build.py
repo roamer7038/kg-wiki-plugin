@@ -114,6 +114,33 @@ class TestBuild(unittest.TestCase):
                         project_dir=self.fix / "project")
         self.assertEqual(result.returncode, 3)
 
+    def test_config_change_detected_incrementally(self):
+        # 使用中の rel/type を config から削除 → 増分 build も --full と同じく
+        # exit 2 で中断する（監査指摘②の回帰テスト。NFR-1 の増分・全再生成一致）
+        build_both(self.fix)
+        config = self.fix / "global/config.yml"
+        text = config.read_text(encoding="utf-8")
+        config.write_text(text.replace("supersedes, ", ""), encoding="utf-8")
+        g_inc, _ = build_both(self.fix)
+        self.assertEqual(g_inc.returncode, 2, g_inc.stdout)
+        self.assertIn("rel-undefined", g_inc.stdout)
+        g_full, _ = build_both(self.fix, extra=["--full"])
+        self.assertEqual(g_full.returncode, 2)
+        self.assertIn("rel-undefined", g_full.stdout)
+        # 復元後は増分 build が回復する
+        config.write_text(text, encoding="utf-8")
+        g_ok, _ = build_both(self.fix)
+        self.assertEqual(g_ok.returncode, 0, g_ok.stdout)
+
+    def test_type_removal_detected_incrementally(self):
+        build_both(self.fix)
+        config = self.fix / "global/config.yml"
+        text = config.read_text(encoding="utf-8")
+        config.write_text(text.replace("queries, ", ""), encoding="utf-8")
+        g_inc, _ = build_both(self.fix)
+        self.assertEqual(g_inc.returncode, 2, g_inc.stdout)
+        self.assertIn("type-mismatch", g_inc.stdout)
+
     def test_tool_version_mismatch_forces_full(self):
         build_both(self.fix)
         man_path = self.fix / "global/topics/llm/_derived/manifest.json"
