@@ -52,7 +52,7 @@ def enabled_by_config(layer_list) -> bool:
 
     複数層選択時はいずれかの層の config が有効なら有効とみなす。
     """
-    env = os.environ.get("CLAUDE_PLUGIN_OPTION_ENABLE_QMD")
+    env = os.environ.get("KG_WIKI_ENABLE_QMD")
     if env is not None:
         return env.strip().lower() in ("1", "true", "yes", "on")
     for layer in layer_list:
@@ -67,7 +67,7 @@ def require_enabled(layer_list) -> None:
     if not enabled_by_config(layer_list):
         raise FeatureDisabledError(
             "qmd 連携が無効。有効化: kg init --with-qmd（config の qmd.enabled: true）"
-            "または環境変数 CLAUDE_PLUGIN_OPTION_ENABLE_QMD=true")
+            "または環境変数 KG_WIKI_ENABLE_QMD=true")
     if qmd_path() is None:
         raise FeatureDisabledError(
             "qmd が PATH に見つからない。導入: npm install -g @tobilu/qmd（Node.js 22+）")

@@ -37,13 +37,13 @@ class TestDegrade(unittest.TestCase):
             root = Path(tmp) / "w"
             run_kg(["init", "--layer", "global"], root=root)
             env = clean_env()
-            env["CLAUDE_PLUGIN_OPTION_ENABLE_QMD"] = "true"
+            env["KG_WIKI_ENABLE_QMD"] = "true"
             env["PATH"] = "/usr/bin:/bin"
             result = run_kg(["hybrid", "q"], root=root, env=env)
             self.assertEqual(result.returncode, 4)
             self.assertIn("@tobilu/qmd", result.stderr)  # 有効だが qmd 不在の案内
             # 明示 false は config より優先
-            env["CLAUDE_PLUGIN_OPTION_ENABLE_QMD"] = "false"
+            env["KG_WIKI_ENABLE_QMD"] = "false"
             result = run_kg(["vsearch", "q"], root=root, env=env)
             self.assertEqual(result.returncode, 4)
             self.assertIn("有効化", result.stderr)

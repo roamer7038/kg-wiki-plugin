@@ -5,25 +5,5 @@
   "author": {
     "name": "roamer7038"
   },
-  "hooks": "./hooks/hooks.json",
-  "userConfig": {
-    "wiki_root": {
-      "type": "directory",
-      "title": "グローバル層ルート",
-      "default": "~/.kg-wiki",
-      "description": "知識リポジトリ（グローバル層）のルートディレクトリ"
-    },
-    "enable_hook_context": {
-      "type": "boolean",
-      "title": "hook 軽量注入",
-      "default": true,
-      "description": "プロンプト送信時に、関連ページへのポインタ（最大 5 件）を自動で注入する"
-    },
-    "enable_qmd": {
-      "type": "boolean",
-      "title": "qmd 連携",
-      "default": false,
-      "description": "qmd 委譲によるベクトル検索（kg vsearch / kg hybrid）を有効にする。別途 qmd のインストールが必要"
-    }
-  }
+  "hooks": "./hooks/hooks.json"
 }

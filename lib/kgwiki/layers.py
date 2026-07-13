@@ -38,9 +38,6 @@ def resolve_global_root(cli_root=None) -> Path:
     env = os.environ.get("KG_WIKI_ROOT")
     if env:
         return Path(env).expanduser()
-    opt = os.environ.get("CLAUDE_PLUGIN_OPTION_WIKI_ROOT")
-    if opt:
-        return Path(opt).expanduser()
     return Path(DEFAULT_GLOBAL_ROOT).expanduser()
 
 

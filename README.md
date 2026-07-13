@@ -57,19 +57,24 @@ permissions を併用する（方式設計 02 §6.5）:
 }
 ```
 
-## ユーザ設定（plugin.json userConfig）
+## ユーザ設定
 
-| キー | 既定 | 用途 |
+設定は**環境変数**と**各層の `config.yml`** で行う（plugin.json の `userConfig` は使わない。理由は
+詳細設計 04 §10）。
+
+| 環境変数 | 既定 | 用途 |
 |---|---|---|
-| `wiki_root` | `~/.kg-wiki` | グローバル層ルート（環境変数 `KG_WIKI_ROOT` でも指定可） |
-| `enable_hook_context` | true | UserPromptSubmit での関連ページポインタ注入（環境変数 `CLAUDE_PLUGIN_OPTION_ENABLE_HOOK_CONTEXT=false` で無効化） |
-| `enable_qmd` | false | qmd 委譲のベクトル/ハイブリッド検索（`kg init --with-qmd` が設定する。環境変数 `CLAUDE_PLUGIN_OPTION_ENABLE_QMD` が優先） |
+| `KG_WIKI_ROOT` | `~/.kg-wiki` | グローバル層ルート（`--root` が優先。コマンド単位の指定はそちら） |
+| `KG_WIKI_HOOK_CONTEXT` | 未設定（＝有効） | `false` で UserPromptSubmit の関連ページポインタ注入を無効化 |
+| `KG_WIKI_ENABLE_QMD` | 未設定 | qmd 委譲のベクトル/ハイブリッド検索。通常は `kg init --with-qmd`（各層の `config.yml` の `qmd.enabled`）で設定し、この環境変数はそれを上書きする |
 
-**hook 注入と `wiki_root` の注意**: Claude Code の制約により、hook プロセスは userConfig の値を
-受け取れない（`${user_config.KEY}` は hook コマンドで展開されず、`CLAUDE_PLUGIN_OPTION_*` も
-hook プロセスには渡らない。詳細設計 04 §10）。そのため **UserPromptSubmit の注入は `wiki_root`
-の設定を見ない**（既定 `~/.kg-wiki` を対象とする）。既定以外の場所にグローバル層を置く場合は、
-シェル環境に `KG_WIKI_ROOT` を設定すること。未設定でも hook は空出力・exit 0 で安全に終わるが、
+**なぜ userConfig を使わないか**: `userConfig` の値が `CLAUDE_PLUGIN_OPTION_<KEY>` として渡るのは
+hook プロセスのみで、スキル・エージェントが `kg` を実行する Bash ツールの環境には渡らない。
+`kg` の主要な実行経路は Bash ツールであるため、userConfig で設定しても大半のコマンドに届かず、
+「設定したのに効かない」という失敗を招く。設定手段は上記の環境変数と `config.yml` に一本化している。
+
+グローバル層を既定以外の場所に置く場合は、シェル環境（`.zshrc` 等）に `KG_WIKI_ROOT` を設定すること。
+hook もこの環境変数を読む。未設定のまま既定以外の場所を使うと、hook は空出力・exit 0 で安全に終わるが、
 注入は機能しない（無言で何も起きない状態になる）。
 
 ## テスト
