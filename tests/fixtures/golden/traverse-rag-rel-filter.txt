@@ -1,0 +1,4 @@
+1	[[llm/concepts/graphrag]]	GraphRAG — コミュニティ検出+要約で俯瞰質問に答える RAG 拡張	via [[llm/concepts/rag]] <-is_a-
+1	[[llm/concepts/vector-search]]	ベクトル検索 — 埋め込みベクトルによる意味検索	via [[llm/concepts/rag]] -mentions->
+2	[[llm/articles/graphrag-intro]]	GraphRAG 入門 — [[llm/concepts/graphrag]] の入門記事。未執筆の [[llm/concepts/not-yet-written]] も参照している。	via [[llm/concepts/graphrag]] <-mentions-
+2	[[proj/concepts/local-note]]	ローカルメモ — プロジェクト固有のメモ	via [[llm/concepts/graphrag]] <-mentions-

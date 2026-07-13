@@ -1,0 +1,3 @@
+12.00	[[llm/concepts/knowledge-graph]]	ナレッジグラフ — 型付き関係で知識を表すグラフ構造
+1.33	[[llm/concepts/graphrag]]	GraphRAG — コミュニティ検出+要約で俯瞰質問に答える RAG 拡張
+0.67	[[llm/concepts/community-detection]]	コミュニティ検出 — グラフのコミュニティ構造の検出

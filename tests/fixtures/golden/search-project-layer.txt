@@ -1,0 +1,1 @@
+6.50	[[proj/decisions/use-kg-wiki]]	kg-wiki 採用 — kg-wiki 採用の決定

@@ -1,0 +1,8 @@
+6.50	[[llm/concepts/graphrag]]	GraphRAG — コミュニティ検出+要約で俯瞰質問に答える RAG 拡張
+6.00	[[llm/concepts/increment]]	増分 — 差分更新アルゴリズム
+6.00	[[llm/papers/lightrag]]	LightRAG — 増分更新に対応した軽量 GraphRAG
+3.50	[[llm/articles/graphrag-intro]]	GraphRAG 入門 — [[llm/concepts/graphrag]] の入門記事。未執筆の [[llm/concepts/not-yet-written]] も参照している。
+3.00	[[llm/decisions/adopt-graphrag]]	GraphRAG 採用の決定 — GraphRAG 採用の決定記録
+3.00	[[llm/papers/graphrag-bench]]	GraphRAG-Bench — GraphRAG の評価ベンチマーク
+1.50	[[llm/entities/microsoft]]	Microsoft — GraphRAG を公開した企業
+0.50	[[proj/concepts/local-note]]	ローカルメモ — プロジェクト固有のメモ

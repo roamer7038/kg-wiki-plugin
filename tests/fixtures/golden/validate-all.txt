@@ -1,0 +1,5 @@
+warn	link-broken-body	llm/articles/graphrag-intro	本文リンクの未解決: [[llm/concepts/not-yet-written]]
+warn	page-orphan	llm/concepts/lonely	入出エッジ（mentions 含む）が 0
+warn	shadow	llm/concepts/shadowed	同一 ref が両層に存在（プロジェクト層を優先）
+info	contradicts-pair	llm/papers/rag-survey	llm/papers/rag-survey ↔ llm/papers/graphrag-bench
+info	superseded-ref	llm/queries/legacy-note	[[llm/concepts/old-search]] は [[llm/concepts/vector-search]] に supersede されている（mentions で参照中）

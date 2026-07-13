@@ -1,0 +1,2 @@
+{"from":"llm/entities/microsoft","len":2,"steps":[{"direction":"out","ref":"llm/concepts/graphrag","rel":"uses"},{"direction":"out","ref":"llm/concepts/rag","rel":"is_a"}]}
+{"from":"llm/entities/microsoft","len":2,"steps":[{"direction":"out","ref":"llm/concepts/graphrag","rel":"uses"},{"direction":"out","ref":"llm/concepts/rag","rel":"mentions"}]}

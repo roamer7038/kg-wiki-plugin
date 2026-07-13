@@ -1,0 +1,9 @@
+version: 1
+topics:
+  - name: llm
+  - name: proj
+types: [concepts, entities, articles, papers, queries, decisions]
+relations: [is_a, part_of, uses, relates_to, contradicts, supersedes, derived_from, evaluated_by]
+qmd:
+  enabled: false
+  version_range: ""

@@ -1,0 +1,4 @@
+1	[[llm/concepts/agentic-search]]	Agentic Search — 反復・書き換えを伴う検索行動	via [[llm/concepts/rag]] <-relates_to-
+1	[[llm/concepts/graphrag]]	GraphRAG — コミュニティ検出+要約で俯瞰質問に答える RAG 拡張	via [[llm/concepts/rag]] <-is_a-
+1	[[llm/concepts/project-only]]	プロジェクト限定ページ — プロジェクト層のみのページ	via [[llm/concepts/rag]] <-relates_to-
+1	[[proj/decisions/use-kg-wiki]]	kg-wiki 採用 — kg-wiki 採用の決定	via [[llm/concepts/rag]] <-uses-

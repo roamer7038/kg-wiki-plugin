@@ -1,0 +1,5 @@
+version: 2
+topics: []
+types: [concepts]
+relations: [is_a]
+unknown_key: 1

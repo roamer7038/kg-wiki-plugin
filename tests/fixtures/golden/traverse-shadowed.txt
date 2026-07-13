@@ -1,0 +1,1 @@
+1	[[llm/concepts/knowledge-graph]]	ナレッジグラフ — 型付き関係で知識を表すグラフ構造	via [[llm/concepts/shadowed]] -uses->

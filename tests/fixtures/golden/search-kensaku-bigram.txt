@@ -1,0 +1,7 @@
+6.50	[[llm/concepts/adaptive-retrieval]]	適応的検索 — 検索の要否と手段を動的に選択する
+6.00	[[llm/concepts/old-search]]	旧検索 — 旧式の検索手法
+6.00	[[llm/concepts/vector-search]]	ベクトル検索 — 埋め込みベクトルによる意味検索
+6.00	[[llm/queries/legacy-note]]	旧検索の調査メモ — 旧検索に関する調査メモ
+4.50	[[llm/concepts/agentic-search]]	Agentic Search — 反復・書き換えを伴う検索行動
+4.50	[[llm/concepts/rag]]	RAG — 検索拡張生成の基本形
+2.50	[[tools/concepts/qmd]]	qmd — ローカル Markdown 検索エンジン

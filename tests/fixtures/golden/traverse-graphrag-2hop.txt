@@ -1,0 +1,17 @@
+1	[[llm/articles/graphrag-intro]]	GraphRAG 入門 — [[llm/concepts/graphrag]] の入門記事。未執筆の [[llm/concepts/not-yet-written]] も参照している。	via [[llm/concepts/graphrag]] <-mentions-
+1	[[llm/concepts/knowledge-graph]]	ナレッジグラフ — 型付き関係で知識を表すグラフ構造	via [[llm/concepts/graphrag]] -uses->
+1	[[llm/concepts/rag]]	RAG — 検索拡張生成の基本形	via [[llm/concepts/graphrag]] -is_a->
+1	[[llm/decisions/adopt-graphrag]]	GraphRAG 採用の決定 — GraphRAG 採用の決定記録	via [[llm/concepts/graphrag]] <-uses-
+1	[[llm/entities/microsoft]]	Microsoft — GraphRAG を公開した企業	via [[llm/concepts/graphrag]] <-uses-
+1	[[llm/papers/graphrag-bench]]	GraphRAG-Bench — GraphRAG の評価ベンチマーク	via [[llm/concepts/graphrag]] -evaluated_by->
+1	[[llm/papers/lightrag]]	LightRAG — 増分更新に対応した軽量 GraphRAG	via [[llm/concepts/graphrag]] <-derived_from-
+1	[[proj/concepts/local-note]]	ローカルメモ — プロジェクト固有のメモ	via [[llm/concepts/graphrag]] <-mentions-
+2	[[llm/concepts/agentic-search]]	Agentic Search — 反復・書き換えを伴う検索行動	via [[llm/concepts/rag]] <-relates_to-
+2	[[llm/concepts/community-detection]]	コミュニティ検出 — グラフのコミュニティ構造の検出	via [[llm/concepts/knowledge-graph]] <-part_of-
+2	[[llm/concepts/increment]]	増分 — 差分更新アルゴリズム	via [[llm/papers/lightrag]] -mentions->
+2	[[llm/concepts/not-yet-written]]	(missing)	via [[llm/articles/graphrag-intro]] -mentions->
+2	[[llm/concepts/project-only]]	プロジェクト限定ページ — プロジェクト層のみのページ	via [[llm/concepts/rag]] <-relates_to-
+2	[[llm/concepts/shadowed]]	Shadowed — project 版が優先される	via [[llm/concepts/knowledge-graph]] <-uses-
+2	[[llm/concepts/vector-search]]	ベクトル検索 — 埋め込みベクトルによる意味検索	via [[llm/concepts/rag]] -mentions->
+2	[[llm/papers/rag-survey]]	RAG サーベイ — RAG 手法のサーベイ論文	via [[llm/papers/graphrag-bench]] <-contradicts-
+2	[[proj/decisions/use-kg-wiki]]	kg-wiki 採用 — kg-wiki 採用の決定	via [[llm/concepts/rag]] <-uses-

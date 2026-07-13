@@ -1,0 +1,2 @@
+2	[[llm/entities/microsoft]] -uses-> [[llm/concepts/graphrag]] -is_a-> [[llm/concepts/rag]]
+2	[[llm/entities/microsoft]] -uses-> [[llm/concepts/graphrag]] -mentions-> [[llm/concepts/rag]]

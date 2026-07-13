@@ -1,0 +1,5 @@
+{"code":"link-broken-body","message":"本文リンクの未解決: [[llm/concepts/not-yet-written]]","severity":"warn","target":"llm/articles/graphrag-intro"}
+{"code":"page-orphan","message":"入出エッジ（mentions 含む）が 0","severity":"warn","target":"llm/concepts/lonely"}
+{"code":"shadow","message":"同一 ref が両層に存在（プロジェクト層を優先）","severity":"warn","target":"llm/concepts/shadowed"}
+{"code":"contradicts-pair","message":"llm/papers/rag-survey ↔ llm/papers/graphrag-bench","severity":"info","target":"llm/papers/rag-survey"}
+{"code":"superseded-ref","message":"[[llm/concepts/old-search]] は [[llm/concepts/vector-search]] に supersede されている（mentions で参照中）","severity":"info","target":"llm/queries/legacy-note"}
