@@ -11,7 +11,7 @@ from .errors import KgError, UsageError
 
 GLOBAL = "global"
 PROJECT = "project"
-DEFAULT_GLOBAL_ROOT = "~/kg-wiki"
+DEFAULT_GLOBAL_ROOT = "~/.kg-wiki"
 PROJECT_DIR_NAME = ".kg-wiki"
 
 
