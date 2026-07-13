@@ -30,15 +30,21 @@ def is_current(data) -> bool:
     )
 
 
-def build_manifest(pages_hashes: dict) -> dict:
-    """topic のページハッシュ集合から manifest 内容を構築する。"""
+def build_manifest(pages_hashes: dict, communities_algorithm: str = None) -> dict:
+    """topic のページハッシュ集合から manifest 内容を構築する（03 §3.2）。"""
     shash = hashing.set_hash(pages_hashes)
+    derived = {
+        "adjacency.json": shash,
+        "graph.tsv": shash,
+        "index.jsonl": shash,
+    }
+    if communities_algorithm is not None:
+        derived["communities"] = {
+            "algorithm": communities_algorithm,
+            "built_from": shash,
+        }
     return {
-        "derived": {
-            "adjacency.json": shash,
-            "graph.tsv": shash,
-            "index.jsonl": shash,
-        },
+        "derived": derived,
         "pages": dict(sorted(pages_hashes.items())),
         "schema_version": SCHEMA_VERSION,
         "tool_version": __version__,

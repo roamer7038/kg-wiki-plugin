@@ -11,11 +11,8 @@ from . import __version__
 from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
                      ValidationFailure)
 
-CURRENT_PHASE = 1
+CURRENT_PHASE = 2
 PHASE_GATE = {
-    "vsearch": (2, "qmd 委譲のベクトル検索は Phase 2 で提供予定"),
-    "hybrid": (2, "qmd 委譲のハイブリッド検索は Phase 2 で提供予定"),
-    "community": (2, "コミュニティ検索は Phase 2 で提供予定"),
     "pack": (3, "コンテキストパックは Phase 3 で提供予定"),
     "skillgen": (3, "Corpus2Skill 生成は Phase 3 で提供予定"),
     "hook-context": (3, "hook 注入は Phase 3 で提供予定"),
@@ -102,6 +99,19 @@ def build_parser():
     sp.add_argument("--keywords", default=None, metavar="a,b")
     _add_common(sp, write=True, with_limit=False)
 
+    sp = sub.add_parser("vsearch", help="ベクトル検索（qmd 委譲）")
+    sp.add_argument("query")
+    _add_common(sp)
+
+    sp = sub.add_parser("hybrid", help="ハイブリッド検索（qmd 委譲）")
+    sp.add_argument("query")
+    _add_common(sp)
+
+    sp = sub.add_parser("community", help="所属コミュニティと要約の取得")
+    sp.add_argument("ref", nargs="?", default=None)
+    sp.add_argument("--query", dest="query", default=None, metavar="Q")
+    _add_common(sp)
+
     sp = sub.add_parser("log", help="log.md への追記（ingest 記録）")
     sp.add_argument("op")
     sp.add_argument("ref")
@@ -161,10 +171,14 @@ def _print_issues(issues, as_json):
 # --- ハンドラ ---
 
 def cmd_init(args):
+    from . import config as config_mod
     from . import fsio, refs, scaffold
     if args.with_qmd:
-        raise FeatureDisabledError(
-            "--with-qmd は Phase 2 で提供予定（qmd 導入後に有効化できる）")
+        from . import qmdfacade
+        if qmdfacade.qmd_path() is None:
+            raise FeatureDisabledError(
+                "qmd が PATH に見つからない。導入: npm install -g @tobilu/qmd"
+                "（Node.js 22+）")
     for name in args.topic:
         if not refs.is_slug(name):
             raise UsageError(f"--topic は [a-z0-9-]+ であること: {name}")
@@ -172,6 +186,21 @@ def cmd_init(args):
     date = _parse_date(args.date)
     with fsio.RootLock(layer.root, "init"):
         scaffold.run_init(layer, args.topic, date, quiet=args.quiet)
+        if args.with_qmd:
+            from . import qmdfacade
+            config_path = layer.root / config_mod.CONFIG_NAME
+            version_range = (qmdfacade.VERIFIED_VERSION_RANGE
+                             or qmdfacade.version() or "")
+            fsio.atomic_write_text(config_path, config_mod.enable_qmd_text(
+                config_path.read_text(encoding="utf-8"), version_range))
+            if not args.quiet:
+                print(f"kg init: qmd 連携を有効化（version_range: {version_range}）",
+                      file=sys.stderr)
+            try:
+                qmdfacade.sync(layer.root)
+            except Exception as e:
+                print(f"kg init: 警告: qmd 同期に失敗（次回 build で再同期）: {e}",
+                      file=sys.stderr)
     return 0
 
 
@@ -189,6 +218,15 @@ def cmd_build(args):
         else:
             failed = True
             _print_issues(result.issues, args.json)
+    if not failed:
+        # (6) qmd 側 index の同期（有効時のみ。失敗は警告にとどめ exit 0。03 §4.3）
+        from . import qmdfacade
+        if qmdfacade.enabled_by_config([layer]) and qmdfacade.qmd_path() is not None:
+            try:
+                qmdfacade.sync(layer.root)
+            except Exception as e:
+                print(f"kg build: 警告: qmd 同期に失敗（次回 build で再同期）: {e}",
+                      file=sys.stderr)
     return 2 if failed else 0
 
 
@@ -311,6 +349,90 @@ def cmd_new(args):
     return 0
 
 
+def _cmd_qmd_search(args, mode):
+    from . import layers, output, qmdfacade
+    if args.limit < 1:
+        raise UsageError("--limit は 1 以上であること")
+    layer_list = _read_layers(args)
+    qmdfacade.require_enabled(layer_list)
+    results = qmdfacade.search(mode, args.query, layer_list, _topics(args),
+                               args.limit)
+    layer_records = [(ly.kind, layers.load_index_records(ly, _topics(args)))
+                     for ly in layer_list]
+    merged, _shadow = layers.merge_index(layer_records)
+    for score, ref, kind in results:
+        rec = merged.get(ref)
+        if args.json:
+            data = dict(rec) if rec else {"layer": kind, "ref": ref}
+            data["score"] = output.score_json(score)
+            print(output.jsonl(data))
+        else:
+            title = rec.get("title", "") if rec else ""
+            summary = rec.get("summary", "") if rec else ""
+            print(output.hit_line(output.fmt_score(score), ref, title, summary))
+    return 0
+
+
+def cmd_vsearch(args):
+    return _cmd_qmd_search(args, "vsearch")
+
+
+def cmd_hybrid(args):
+    return _cmd_qmd_search(args, "hybrid")
+
+
+def cmd_community(args):
+    from . import community, layers, output
+    if (args.ref is None) == (args.query is None):
+        raise UsageError("usage: kg community (<ref> | --query <q>)")
+    layer_list = _read_layers(args)
+    if args.query is not None:
+        if args.limit < 1:
+            raise UsageError("--limit は 1 以上であること")
+        rows = community.run_community_query(args.query, layer_list,
+                                             _topics(args), args.limit)
+        for count, cid, topic, size in rows:
+            if args.json:
+                print(output.jsonl({"community": cid, "count": count,
+                                    "pages": size, "topic": topic}))
+            else:
+                print(f"{count}\t{cid}\t{topic}（{size} pages）")
+        return 0
+
+    _check_ref_arg(args.ref)
+    cid, layer, members, summary, stale = community.run_community_ref(
+        args.ref, layer_list, _topics(args))
+    topic = args.ref.split("/")[0]
+    has_summary = bool(summary) and any(line.strip() for line in summary)
+    if args.json:
+        print(output.jsonl({
+            "community": cid,
+            "layer": layer.kind,
+            "pages": len(members),
+            "stale": stale,
+            "summary": "\n".join(summary).strip("\n") if has_summary else "",
+            "topic": topic,
+        }))
+        return 0
+    for line in output.TRUST_NOTICE:  # 俯瞰供給 = 本文非返却の例外（03 §4.12）
+        print(line)
+    if stale:
+        print("[kg-wiki] 警告: この要約は stale（ソース変更後に再執筆されていない）。"
+              "kg build と要約の再執筆を検討すること。")
+    print(f"community: {cid}（topic: {topic}, {len(members)} pages, "
+          f"layer: {layer.kind}）")
+    if has_summary:
+        print("\n".join(summary).strip("\n"))
+    else:
+        records = layers.load_index_records(layer, [topic])
+        for ref in members:
+            rec = records.get(ref, {})
+            print(f"- [[{ref}]] — {rec.get('summary', '')}".rstrip())
+        print("kg community: summary 未執筆（骨格の所属一覧のみ表示）。"
+              "/kg-wiki:kg-build の要約執筆ワークフローで執筆する", file=sys.stderr)
+    return 0
+
+
 def cmd_log(args):
     from . import fsio, layers, oplog
     if args.op != "ingest":
@@ -342,6 +464,9 @@ HANDLERS = {
     "move": cmd_move,
     "new": cmd_new,
     "log": cmd_log,
+    "vsearch": cmd_vsearch,
+    "hybrid": cmd_hybrid,
+    "community": cmd_community,
 }
 
 

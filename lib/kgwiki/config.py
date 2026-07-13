@@ -151,6 +151,36 @@ def initial_config_text(topic_names) -> str:
     return "\n".join(lines) + "\n"
 
 
+def enable_qmd_text(text: str, version_range: str) -> str:
+    """config.yml テキストの qmd ブロックを有効化する（kg init --with-qmd。03 §4.2）。"""
+    range_line = "  version_range: " + yamlsub.dump_scalar(version_range)
+    lines = text.split("\n")
+    try:
+        qi = lines.index("qmd:")
+    except ValueError:
+        if lines and lines[-1] == "":
+            lines = lines[:-1]
+        return "\n".join(lines + ["qmd:", "  enabled: true", range_line, ""])
+    end = qi + 1
+    while end < len(lines) and lines[end].startswith("  "):
+        end += 1
+    block = lines[qi + 1:end]
+    saw_enabled = saw_range = False
+    for i, line in enumerate(block):
+        if line.startswith("  enabled:"):
+            block[i] = "  enabled: true"
+            saw_enabled = True
+        elif line.startswith("  version_range:"):
+            block[i] = range_line
+            saw_range = True
+    if not saw_enabled:
+        block.insert(0, "  enabled: true")
+    if not saw_range:
+        block.append(range_line)
+    lines[qi + 1:end] = block
+    return "\n".join(lines)
+
+
 def add_topics_text(text: str, new_names) -> str:
     """既存 config.yml テキストに topic を追記する（kg init。他行は変更しない）。"""
     lines = text.split("\n")

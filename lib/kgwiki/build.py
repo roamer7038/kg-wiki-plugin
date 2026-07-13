@@ -106,12 +106,34 @@ def build_topic(layer, cfg, topic: str, full: bool) -> TopicResult:
 
     adj = graph.adjacency_data(edges, records.keys())
 
+    # (5) コミュニティ検出（Phase 2。増分でも毎回グラフ全体で再計算する。02 §4.1）
+    from . import community
+    weights = community.build_weights(edges, set(records))
+    communities = community.detect(weights)
+    ids = community.assign_ids(communities, community.load_assignment(derived))
+    assignment = community.assignment_data(communities, ids)
+    md_texts = {}
+    for idx, member_list in enumerate(communities):
+        cid = ids[idx]
+        md_path = derived / "communities" / f"{cid}.md"
+        existing_summary = None
+        if md_path.is_file():
+            existing_summary = community.summary_region(
+                md_path.read_text(encoding="utf-8"))
+        md_texts[cid] = community.community_md_text(
+            topic, cid, member_list, records, edges, existing_summary)
+
     # (7) 書き込み（派生物 → manifest の順。各ファイルはアトミック）
     fsio.atomic_write_text(derived / "index.jsonl", indexer.index_jsonl_text(records))
     fsio.atomic_write_text(derived / "index.md", indexer.index_md_text(topic, records))
     fsio.atomic_write_text(derived / "graph.tsv", graph.graph_tsv_text(edges))
     fsio.atomic_write_text(derived / "adjacency.json", graph.adjacency_json_text(adj))
-    manifest.write(derived, manifest.build_manifest({r: v[2] for r, v in current.items()}))
+    fsio.atomic_write_text(derived / "communities" / "assignment.json",
+                           community.assignment_json_text(assignment))
+    for cid, text in md_texts.items():
+        fsio.atomic_write_text(derived / "communities" / f"{cid}.md", text)
+    manifest.write(derived, manifest.build_manifest(
+        {r: v[2] for r, v in current.items()}, community.ALGORITHM))
 
     result.pages = len(current)
     result.added = len(added)

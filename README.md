@@ -62,15 +62,22 @@ permissions を併用する（方式設計 02 §6.5）:
 
 ```bash
 python3 -m unittest discover tests            # 全テスト
-KG_PERF=1 python3 -m unittest tests.test_perf # 性能スモーク（NFR-5）
-KG_UPDATE_GOLDEN=1 python3 -m unittest tests.test_golden  # golden 再生成
+(cd tests && KG_PERF=1 python3 -m unittest test_perf)  # 性能スモーク（NFR-5）
+(cd tests && KG_UPDATE_GOLDEN=1 python3 -m unittest test_golden)  # golden 再生成
 claude plugin validate --strict .             # プラグイン検証
 ```
 
 ## Phase 対応状況
 
-Phase 1（コア）を実装済み: init / build / search / traverse / path / validate /
-move / new / log + スキル 7 種 + サブエージェント 3 種。
-`vsearch` / `hybrid` / `community`（Phase 2）、`pack` / `skillgen` /
-`hook-context`（Phase 3）は exit 4（機能無効）を返す。hooks.json は Phase 3 で
-同梱する（未実装コマンドのノイズ回避。方式設計 02 §6.6）。
+- **Phase 1（コア）**: init / build / search / traverse / path / validate /
+  move / new / log + スキル 7 種 + サブエージェント 3 種。
+- **Phase 2（拡張検索）**: コミュニティ検出（CNM・決定論）と `kg community`、
+  qmd 委譲の `kg vsearch` / `kg hybrid`（qmd 無効・不在時は exit 4、他機能は
+  無影響）、`kg init --with-qmd`。検索品質の計測記録は
+  `docs/phase2-search-eval.md`（qmd 実機確認後に vsearch/hybrid 列を追記）。
+- **Phase 3**: `pack` / `skillgen` / `hook-context` は exit 4（機能無効）。
+  hooks.json は Phase 3 で同梱する（未実装コマンドのノイズ回避。02 §6.6）。
+
+qmd を使う場合: `npm install -g @tobilu/qmd`（Node.js 22+）ののち
+`kg init --with-qmd`。qmd のコマンド体系との整合（詳細設計 04 §8.4 の実機確認）
+が未了の間、vsearch / hybrid は動作しない可能性がある。

@@ -1,13 +1,16 @@
 """kg validate: 全 issue コード検査（基本設計 03 §4.7）。"""
 
+from . import community as community_mod
 from . import graph as graph_mod
-from . import hashing, layers, manifest
+from . import hashing, layers, manifest, yamlsub
 from . import pages as pages_mod
 from . import refs as refs_mod
 from .layers import GLOBAL, PROJECT
 from .output import Issue, sort_issues
 
-DERIVED_FILES = ("manifest.json", "index.jsonl", "index.md", "graph.tsv", "adjacency.json")
+DERIVED_FILES = ("manifest.json", "index.jsonl", "index.md", "graph.tsv",
+                 "adjacency.json", "communities/assignment.json")
+COMMUNITY_FM_KEYS = {"community", "topic", "built_from"}
 
 
 def _resolution_refset(cli_root):
@@ -149,7 +152,105 @@ def run_validate(layer_list, topics=None, cli_root=None):
                 issues.append(Issue("warn", "derived-stale", target,
                                     "pages/ と manifest の不一致（kg build を実行）"))
 
+    # コミュニティ要約 md の検査（Phase 2。03 §3.6: community-format / community-stale）
+    for ld in loaded_layers:
+        cfg = ld.config
+        topic_names = cfg.topic_names() if cfg is not None else layers.fs_topics(ld.layer.root)
+        if topics is not None:
+            topic_names = [t for t in topic_names if t in topics]
+        for topic in topic_names:
+            issues.extend(_community_issues(ld, topic))
+
+    # qmd バージョン逸脱（Phase 2。03 §4.7: qmd-version）
+    issues.extend(_qmd_version_issues(loaded_layers))
+
     return sort_issues(issues)
+
+
+def _community_issues(ld, topic):
+    issues = []
+    derived = layers.derived_dir(ld.layer.root, topic)
+    cdir = derived / "communities"
+    if not cdir.is_dir():
+        return issues
+    assignment = community_mod.load_assignment(derived)
+    members_by_id = {}
+    if assignment is not None:
+        raw = assignment.get("communities")
+        if isinstance(raw, dict):
+            members_by_id = {k: v for k, v in raw.items() if isinstance(v, list)}
+    for md_path in sorted(cdir.glob("*.md")):
+        cid = md_path.name[:-3]
+        target = f"{ld.layer.kind}:{topic}/{cid}"
+        text = md_path.read_text(encoding="utf-8")
+        fm_lines, _sk, _su, errors = community_mod.parse_community_md(text)
+        for message in errors:
+            issues.append(Issue("error", "community-format", target, message))
+        built_from = None
+        if fm_lines is not None:
+            data, yaml_issues = yamlsub.parse_mapping_lines(fm_lines, first_lineno=2)
+            for yi in yaml_issues:
+                issues.append(Issue("error", "community-format", target,
+                                    f"L{yi.line}: {yi.message}"))
+            unknown = set(data) - COMMUNITY_FM_KEYS
+            missing = COMMUNITY_FM_KEYS - set(data)
+            if unknown:
+                issues.append(Issue("error", "community-format", target,
+                                    f"未知キー: {', '.join(sorted(unknown))}"))
+            if missing:
+                issues.append(Issue("error", "community-format", target,
+                                    f"必須キーの欠落: {', '.join(sorted(missing))}"))
+            if "community" in data and data["community"] != cid:
+                issues.append(Issue("error", "community-format", target,
+                                    f"community '{data['community']}' が"
+                                    f"ファイル名 '{cid}' と一致しない"))
+            if "topic" in data and data["topic"] != topic:
+                issues.append(Issue("error", "community-format", target,
+                                    f"topic '{data['topic']}' が不一致"))
+            built_from = data.get("built_from")
+            if built_from is not None and not (isinstance(built_from, str)
+                                               and built_from.startswith("sha256:")):
+                issues.append(Issue("error", "community-format", target,
+                                    "built_from は 'sha256:<hex64>' であること"))
+                built_from = None
+        # stale / 孤児（A-5。04 §5.3: 孤児は community-stale の message で区別）
+        if cid not in members_by_id:
+            issues.append(Issue("warn", "community-stale", target,
+                                "現分割に存在しない旧コミュニティの孤児 md"
+                                "（内容確認のうえ手動削除する）"))
+            continue
+        if built_from is None:
+            continue  # format エラーとして報告済み
+        current = {}
+        stale = False
+        for member in members_by_id[cid]:
+            page = ld.pages.get(member)
+            if page is None:
+                stale = True
+                continue
+            current[member] = page.hash
+        if stale or hashing.set_hash(current) != built_from:
+            issues.append(Issue("warn", "community-stale", target,
+                                "built_from が現所属ページの集合ハッシュと不一致"
+                                "（kg build と要約の再執筆を検討）"))
+    return issues
+
+
+def _qmd_version_issues(loaded_layers):
+    from . import qmdfacade
+    issues = []
+    for ld in loaded_layers:
+        cfg = ld.config
+        if cfg is None or not cfg.qmd_version_range:
+            continue
+        if not qmdfacade.enabled_by_config([ld.layer]) or qmdfacade.qmd_path() is None:
+            continue
+        actual = qmdfacade.version()
+        if actual is not None and not actual.startswith(cfg.qmd_version_range):
+            issues.append(Issue("warn", "qmd-version", f"{ld.layer.kind}:config.yml",
+                                f"qmd 実バージョン {actual} が動作確認済みレンジ "
+                                f"'{cfg.qmd_version_range}' 外"))
+    return issues
 
 
 def run_quick(layer_list, cli_root=None) -> str:
