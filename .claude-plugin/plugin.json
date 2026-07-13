@@ -17,13 +17,13 @@
       "type": "boolean",
       "title": "hook 軽量注入",
       "default": true,
-      "description": "UserPromptSubmit での関連ページポインタ注入（Phase 3）"
+      "description": "プロンプト送信時に、関連ページへのポインタ（最大 5 件）を自動で注入する"
     },
     "enable_qmd": {
       "type": "boolean",
       "title": "qmd 連携",
       "default": false,
-      "description": "qmd 委譲によるベクトル/ハイブリッド検索（Phase 2）"
+      "description": "qmd 委譲によるベクトル検索（kg vsearch / kg hybrid）を有効にする。別途 qmd のインストールが必要"
     }
   }
 }
