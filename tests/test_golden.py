@@ -42,6 +42,10 @@ COMMANDS = [
     ("community-graphrag", ["community", "llm/concepts/graphrag"]),
     ("community-graphrag-json", ["community", "llm/concepts/graphrag", "--json"]),
     ("community-query", ["community", "--query", "graphrag"]),
+    # Phase 3: pack
+    ("pack-refs-2hop", ["pack", "llm/papers/lightrag", "--hops", "2"]),
+    ("pack-query", ["pack", "graphrag", "--limit", "3"]),
+    ("pack-max-bytes", ["pack", "graphrag", "--limit", "5", "--max-bytes", "900"]),
 ]
 
 

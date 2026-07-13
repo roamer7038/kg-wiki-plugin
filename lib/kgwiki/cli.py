@@ -11,9 +11,8 @@ from . import __version__
 from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
                      ValidationFailure)
 
-CURRENT_PHASE = 2
+CURRENT_PHASE = 3
 PHASE_GATE = {
-    "pack": (3, "コンテキストパックは Phase 3 で提供予定"),
     "skillgen": (3, "Corpus2Skill 生成は Phase 3 で提供予定"),
     "hook-context": (3, "hook 注入は Phase 3 で提供予定"),
 }
@@ -24,12 +23,13 @@ class _ArgParser(argparse.ArgumentParser):
         raise UsageError(f"{message}\n{self.format_usage().rstrip()}")
 
 
-def _add_common(p, write=False, limit_default=10, with_limit=True,
+def _add_common(p, write=False, limit_default=10, with_limit=True, with_json=True,
                 layer_choices=("global", "project", "all")):
     p.add_argument("--root", metavar="PATH", help="グローバル層ルートの明示")
     p.add_argument("--layer", choices=list(layer_choices), default=None)
     p.add_argument("--topic", metavar="T[,T...]", default=None)
-    p.add_argument("--json", action="store_true")
+    if with_json:
+        p.add_argument("--json", action="store_true")
     if with_limit:
         p.add_argument("--limit", type=int, default=limit_default, metavar="N")
     p.add_argument("--quiet", action="store_true")
@@ -111,6 +111,14 @@ def build_parser():
     sp.add_argument("ref", nargs="?", default=None)
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
+
+    sp = sub.add_parser("pack", help="コンテキストパックの生成")
+    sp.add_argument("args", nargs="*", metavar="<query> | <ref>...")
+    sp.add_argument("--hops", type=int, default=1, metavar="N")
+    sp.add_argument("--max-bytes", type=int, default=None, dest="max_bytes",
+                    metavar="B")
+    sp.add_argument("--out", default=None, metavar="FILE")
+    _add_common(sp, with_json=False)
 
     sp = sub.add_parser("log", help="log.md への追記（ingest 記録）")
     sp.add_argument("op")
@@ -436,6 +444,38 @@ def cmd_community(args):
     return 0
 
 
+def cmd_pack(args):
+    from . import fsio, pack
+    if not args.args:
+        raise UsageError("usage: kg pack (<query> | <ref>...)")
+    if not 1 <= args.hops <= 6:
+        raise UsageError("--hops は 1〜6 であること")
+    if args.limit < 1:
+        raise UsageError("--limit は 1 以上であること")
+    if args.max_bytes is not None and args.max_bytes < 1:
+        raise UsageError("--max-bytes は 1 以上であること")
+
+    text, _omitted, over_budget = pack.run_pack(
+        args.args, _read_layers(args), _topics(args), args.hops, args.limit,
+        args.max_bytes)
+    if text is None:
+        raise KgError("収集対象が 0 件（クエリ・ref を見直す）")
+    if over_budget:
+        # 省略一覧のバイトも計上するため、極端に小さい上限では最小出力が上限を超える。
+        # 打ち切らずに出力し警告のみとする（決定論を優先。04 §7.2）
+        print(f"kg pack: 警告: 出力が上限超過（--max-bytes {args.max_bytes} に対し "
+              f"{len(text.encode('utf-8'))} バイト）。省略一覧のバイト計上のため打ち切らない",
+              file=sys.stderr)
+    if args.out:
+        from pathlib import Path
+        fsio.atomic_write_text(Path(args.out).expanduser(), text)
+        if not args.quiet:
+            print(f"kg pack: {args.out} に書き出した", file=sys.stderr)
+    else:
+        sys.stdout.write(text)
+    return 0
+
+
 def cmd_log(args):
     from . import fsio, layers, oplog
     if args.op != oplog.LOG_CMD_OP:
@@ -470,6 +510,7 @@ HANDLERS = {
     "move": cmd_move,
     "new": cmd_new,
     "log": cmd_log,
+    "pack": cmd_pack,
     "vsearch": cmd_vsearch,
     "hybrid": cmd_hybrid,
     "community": cmd_community,
