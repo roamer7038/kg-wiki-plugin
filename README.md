@@ -76,8 +76,8 @@ claude plugin validate --strict .             # プラグイン検証
   move / new / log + スキル 7 種 + サブエージェント 3 種。
 - **Phase 2（拡張検索）**: コミュニティ検出（CNM・決定論）と `kg community`、
   qmd 委譲の `kg vsearch` / `kg hybrid`（qmd 無効・不在時は exit 4、他機能は
-  無影響）、`kg init --with-qmd`。検索品質の計測記録は
-  `docs/phase2-search-eval.md`（qmd 2.5.3 実機での recall@10: 曖昧・意味系で
+  無影響）、`kg init --with-qmd`。検索品質の計測記録は kg-wiki-specs の
+  `reports/phase2-search-eval.md`（qmd 2.5.3 実機での recall@10: 曖昧・意味系で
   search 0.85 に対し vsearch 0.95 / hybrid 0.90）。
 - **Phase 3**: `pack` / `skillgen` / `hook-context` は exit 4（機能無効）。
   hooks.json は Phase 3 で同梱する（未実装コマンドのノイズ回避。02 §6.6）。
