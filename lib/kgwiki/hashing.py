@@ -1,4 +1,4 @@
-"""ページハッシュ・集合ハッシュ（基本設計 03 §3.1、詳細設計 04 §11.3）。"""
+"""ページハッシュ・集合ハッシュ。"""
 
 import hashlib
 from pathlib import Path
@@ -10,12 +10,12 @@ def page_hash_bytes(data: bytes) -> str:
 
 
 def page_hash(path: Path) -> str:
-    """ファイルのバイト列そのままの SHA-256（03 §3.1）。"""
+    """ファイルのバイト列そのままの SHA-256。"""
     return page_hash_bytes(path.read_bytes())
 
 
 def set_hash(pages: dict) -> str:
-    """集合ハッシュ（03 §3.1）。
+    """集合ハッシュ。
 
     対象ページ集合の "<ref>\\t<hex64>" 行（sha256: プレフィクスなし）を ref の
     Unicode 昇順で LF 連結（末尾改行なし）した UTF-8 バイト列の SHA-256。

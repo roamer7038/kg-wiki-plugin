@@ -1,7 +1,7 @@
-"""wiki-mini に対するゴールデンテスト（03 §7.1〜7.2。T7・T11）。
+"""wiki-mini に対するゴールデンテスト。
 
 期待出力は tests/fixtures/golden/ にコミットする。仕様（スコア係数等）の変更は
-ゴールデン更新を同一コミットで伴うこと（04 §12）。
+ゴールデン更新を同一コミットで伴うこと。
 再生成: KG_UPDATE_GOLDEN=1 python3 -m unittest tests.test_golden
 """
 
@@ -38,11 +38,11 @@ COMMANDS = [
     ("path-json", ["path", "llm/entities/microsoft", "llm/concepts/rag", "--json"]),
     ("validate-all", ["validate"]),
     ("validate-json", ["validate", "--json"]),
-    # Phase 2: コミュニティ
+    # コミュニティ
     ("community-graphrag", ["community", "llm/concepts/graphrag"]),
     ("community-graphrag-json", ["community", "llm/concepts/graphrag", "--json"]),
     ("community-query", ["community", "--query", "graphrag"]),
-    # Phase 3: pack
+    # pack
     ("pack-refs-2hop", ["pack", "llm/papers/lightrag", "--hops", "2"]),
     ("pack-query", ["pack", "graphrag", "--limit", "3"]),
     ("pack-max-bytes", ["pack", "graphrag", "--limit", "5", "--max-bytes", "900"]),
@@ -75,7 +75,7 @@ class TestGolden(unittest.TestCase):
             with self.subTest(name=name):
                 first = self.run_cmd(args)
                 second = self.run_cmd(args)
-                # 決定論: 複数回実行の一致（NFR-2）
+                # 決定論: 複数回実行の一致
                 self.assertEqual(first.stdout, second.stdout, name)
                 self.assertEqual(first.returncode, second.returncode, name)
                 golden_path = GOLDEN_DIR / f"{name}.txt"
@@ -89,7 +89,7 @@ class TestGolden(unittest.TestCase):
 
     def test_topic_filter_keeps_cross_topic_display(self):
         # --topic はエッジの出所絞り込み。到達した他 topic ノードは (missing) では
-        # なく実ページとして表示される（03 §3.5、監査指摘①の回帰テスト）
+        # なく実ページとして表示される（監査指摘①の回帰テスト）
         result = self.run_cmd(["traverse", "tools/concepts/qmd", "--topic", "tools"])
         self.assertIn("llm/concepts/vector-search]]\tベクトル検索", result.stdout)
         self.assertNotIn("(missing)", result.stdout)

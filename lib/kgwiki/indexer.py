@@ -1,10 +1,10 @@
-"""index.jsonl / index.md の生成（基本設計 03 §3.3）。"""
+"""index.jsonl / index.md の生成。"""
 
 from . import output
 
 
 def page_record(page) -> dict:
-    """Page → index.jsonl レコード（03 §3.3 の全キー）。"""
+    """Page → index.jsonl レコード（全キー）。"""
     return {
         "hash": page.hash,
         "keywords": list(page.keywords),
@@ -24,7 +24,7 @@ def index_jsonl_text(records: dict) -> str:
 
 
 def index_md_text(topic: str, records: dict) -> str:
-    """index.jsonl から人間用 index.md を整形生成する（03 §3.3）。"""
+    """index.jsonl から人間用 index.md を整形生成する。"""
     header = (
         f"# index: {topic}（{len(records)} ページ）\n"
         "<!-- 自動生成: kg build。手編集禁止 -->\n"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""1,000 ページ規模の決定論的フィクスチャ生成（NFR-5 の性能計測用。03 §7.1）。
+"""1,000 ページ規模の決定論的フィクスチャ生成（性能計測用）。
 
 固定シードで生成し、出力はコミットしない。
 使い方: python3 tests/perf/gen_fixture.py --pages 1000 --root /tmp/kg-perf

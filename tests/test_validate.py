@@ -1,4 +1,4 @@
-"""kg validate: fixtures/invalid による issue コード網羅（03 §4.7、§7.2。T8）。"""
+"""kg validate: fixtures/invalid による issue コード網羅。"""
 
 import tempfile
 import unittest
@@ -62,7 +62,7 @@ class TestIssueCodes(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
 
     def test_output_sorted(self):
-        # severity（error→warn→info）→ code → target の順（03 §4.7）
+        # severity（error→warn→info）→ code → target の順
         with tempfile.TemporaryDirectory() as tmp:
             fix = copy_fixture("wiki-mini", Path(tmp))
             result = run_kg(["validate"], root=fix / "global",

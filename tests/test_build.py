@@ -1,4 +1,4 @@
-"""kg build: 冪等性・増分=全再生成・中断規約（03 §7.2、T5）。"""
+"""kg build: 冪等性・増分=全再生成・中断規約。"""
 
 import json
 import tempfile
@@ -40,7 +40,7 @@ class TestBuild(unittest.TestCase):
         first = self.derived_state()
         g2, p2 = build_both(self.fix)
         self.assertEqual((g2.returncode, p2.returncode), (0, 0))
-        self.assertEqual(first, self.derived_state())  # バイト一致（NFR-1）
+        self.assertEqual(first, self.derived_state())  # バイト一致
 
     def test_incremental_equals_full(self):
         build_both(self.fix)
@@ -98,7 +98,7 @@ class TestBuild(unittest.TestCase):
         self.assertIn("built tools: 2 pages (+0 ~0 -0)", g.stdout)
 
     def test_link_broken_does_not_halt(self):
-        # リンク未解決は中断理由にしない（03 §4.3）— wiki-mini に含まれる
+        # リンク未解決は中断理由にしない — wiki-mini に含まれる
         g, p = build_both(self.fix)
         self.assertEqual((g.returncode, p.returncode), (0, 0))
 
@@ -116,7 +116,7 @@ class TestBuild(unittest.TestCase):
 
     def test_config_change_detected_incrementally(self):
         # 使用中の rel/type を config から削除 → 増分 build も --full と同じく
-        # exit 2 で中断する（監査指摘②の回帰テスト。NFR-1 の増分・全再生成一致）
+        # exit 2 で中断する（監査指摘②の回帰テスト。増分・全再生成一致）
         build_both(self.fix)
         config = self.fix / "global/config.yml"
         text = config.read_text(encoding="utf-8")

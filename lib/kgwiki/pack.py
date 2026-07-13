@@ -1,8 +1,8 @@
-"""kg pack: コンテキストパックの生成（基本設計 03 §4.13、詳細設計 04 §7）。
+"""kg pack: コンテキストパックの生成。
 
-本文を返す例外的なコマンド（A-7）。信頼境界の注意書きを機械的に付与する（03 §6.4）。
+本文を返す例外的なコマンド。信頼境界の注意書きを機械的に付与する。
 バイト計上は「固定部 + ページブロック列 + 省略部」に分解し、各部は先頭に空行を持たず
-末尾に空行を持つ（04 §7.1。部の連結がそのまま出力となり、計上が独立する）。
+末尾に空行を持つ（部の連結がそのまま出力となり、計上が独立する）。
 """
 
 from . import config as config_mod
@@ -19,17 +19,17 @@ NEIGHBOR_LIMIT = 10 ** 9
 
 
 def block_bytes(lines) -> int:
-    """行列（各行 LF 終端）の UTF-8 バイト長（04 §7.1）。"""
+    """行列（各行 LF 終端）の UTF-8 バイト長。"""
     return len("".join(line + "\n" for line in lines).encode("utf-8"))
 
 
 def is_ref_form(args) -> bool:
-    """位置引数がすべて正準形 ref なら ref 列形式（03 §4.13）。"""
+    """位置引数がすべて正準形 ref なら ref 列形式。"""
     return bool(args) and all(refs_mod.is_canonical(a) for a in args)
 
 
 def collect(args, layer_list, topics, hops: int, limit: int):
-    """収集規則（03 §4.13）。(ref 順の ref 列, merged_index) を返す。
+    """収集規則。(ref 順の ref 列, merged_index) を返す。
 
     missing ノード（両層の index に無い ref）は収集対象から除外する。
     """
@@ -49,7 +49,7 @@ def collect(args, layer_list, topics, hops: int, limit: int):
 
 
 def fixed_lines(refs) -> list:
-    """固定部 = 注意書き 2 行 + 目次（収集された全 ref）。末尾に空行（04 §7.1）。"""
+    """固定部 = 注意書き 2 行 + 目次（収集された全 ref）。末尾に空行。"""
     lines = list(output.TRUST_NOTICE)
     lines += ["", f"## 収載ページ（{len(refs)}）", ""]
     lines += [f"- [[{ref}]]" for ref in refs]
@@ -58,7 +58,7 @@ def fixed_lines(refs) -> list:
 
 
 def source_line(source) -> str:
-    """`- <url>`（+ ` — <title>`）（+ `（accessed: <date>）`）。04 §7.1。"""
+    """`- <url>`（+ ` — <title>`）（+ `（accessed: <date>）`）。"""
     line = f"- {source.url}"
     if source.title:
         line += f" — {source.title}"
@@ -68,7 +68,7 @@ def source_line(source) -> str:
 
 
 def page_lines(page) -> list:
-    """ページブロック（04 §7.1）。sources 節・本文節は空なら出力しない。"""
+    """ページブロック。sources 節・本文節は空なら出力しない。"""
     updated = page.updated.isoformat() if page.updated else ""
     lines = [f"## [[{page.ref}]] — {page.title}（updated: {updated}）", ""]
     if page.sources:
@@ -83,12 +83,12 @@ def page_lines(page) -> list:
 
 
 def omit_lines(refs) -> list:
-    """省略部（末尾の空行を持たない。04 §7.1）。"""
+    """省略部（末尾の空行を持たない）。"""
     return [OMIT_HEADING] + [f"- [[{ref}]]" for ref in refs]
 
 
 def select(refs, sizes, fixed_size: int, max_bytes):
-    """採否の逐次貪欲（04 §7.2）。(kept, omitted) を ref 順で返す。
+    """採否の逐次貪欲。(kept, omitted) を ref 順で返す。
 
     running = 固定部 + 省略部見出し（常時予約）から開始し、ref 順に
     「running + ページブロック ≤ B なら採用、超えるなら省略して省略行を計上」。
@@ -133,7 +133,7 @@ def load_pages(refs, merged, layer_list):
 def run_pack(args, layer_list, topics, hops: int, limit: int, max_bytes):
     """(text, omitted, over_budget) を返す。text は出力全体（LF 終端）。
 
-    収集対象が 0 件なら text=None（呼び出し側が exit 1。03 §4.13）。
+    収集対象が 0 件なら text=None（呼び出し側が exit 1）。
     """
     refs, merged = collect(args, layer_list, topics, hops, limit)
     pages = load_pages(refs, merged, layer_list)

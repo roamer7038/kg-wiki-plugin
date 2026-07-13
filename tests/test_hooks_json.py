@@ -1,4 +1,4 @@
-"""同梱 hooks.json の規約（03 §5.5、02 §6.6。T5）。"""
+"""同梱 hooks.json の規約。"""
 
 import json
 import unittest
@@ -22,7 +22,7 @@ class TestHooksJson(unittest.TestCase):
                     yield hook["command"]
 
     def test_plugin_json_points_at_hooks_file(self):
-        """hooks/hooks.json は自動検出されない（04 §10）。明示参照が必須。"""
+        """hooks/hooks.json は自動検出されない。明示参照が必須。"""
         self.assertEqual(self.plugin.get("hooks"), "./hooks/hooks.json")
 
     def test_registers_both_events(self):
@@ -30,14 +30,14 @@ class TestHooksJson(unittest.TestCase):
                          {"UserPromptSubmit", "SessionStart"})
 
     def test_commands_use_plugin_root_absolute_reference(self):
-        """bin/ の PATH 追加は Bash ツールにのみ及ぶ（A-1）。"""
+        """bin/ の PATH 追加は Bash ツールにのみ及ぶ。"""
         commands = list(self.commands())
         self.assertEqual(len(commands), 2)
         for command in commands:
             self.assertIn('"${CLAUDE_PLUGIN_ROOT}/bin/kg"', command)
 
     def test_no_user_config_placeholder(self):
-        """${user_config.*} を含む hook コマンドは実行されない（04 §10 (a)）。
+        """${user_config.*} を含む hook コマンドは実行されない。
 
         有効/無効の判定は kg hook-context 自身が環境変数で行う。
         """

@@ -1,4 +1,4 @@
-"""config.yml の読み込み・検証・生成（基本設計 03 §2.2）。"""
+"""config.yml の読み込み・検証・生成。"""
 
 import re
 from dataclasses import dataclass, field
@@ -126,7 +126,7 @@ def load_config(root: Path):
 
 
 def initial_config_text(topic_names) -> str:
-    """kg init が生成する config.yml（03 §2.2 の初期値・キー順は規範例のとおり）。"""
+    """kg init が生成する config.yml（初期値・キー順は規範例のとおり）。"""
     lines = ["version: 1"]
     if topic_names:
         lines.append("topics:")
@@ -143,7 +143,7 @@ def initial_config_text(topic_names) -> str:
 
 
 def enable_qmd_text(text: str, version_range: str) -> str:
-    """config.yml テキストの qmd ブロックを有効化する（kg init --with-qmd。03 §4.2）。"""
+    """config.yml テキストの qmd ブロックを有効化する（kg init --with-qmd）。"""
     range_line = "  version_range: " + yamlsub.dump_scalar(version_range)
     lines = text.split("\n")
     try:

@@ -1,4 +1,4 @@
-"""性能スモークテスト（NFR-5: 1,000 ページで検索 < 1 秒・増分 build < 5 秒。T12）。
+"""性能スモークテスト（1,000 ページで検索 < 1 秒・増分 build < 5 秒）。
 
 実行時間が長いため、環境変数 KG_PERF=1 のときのみ実行する
 （例: KG_PERF=1 python3 -m unittest tests.test_perf）。
@@ -58,7 +58,7 @@ class TestPerformance(unittest.TestCase):
                   file=sys.stderr)
 
     def test_dense_graph_community(self):
-        # 密グラフでのコミュニティ検出 < 5 秒（03 §7.2「性能（密グラフ）」）
+        # 密グラフでのコミュニティ検出 < 5 秒
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp) / "dense-wiki"
             subprocess.run(

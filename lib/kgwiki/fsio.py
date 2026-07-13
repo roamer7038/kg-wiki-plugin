@@ -1,4 +1,4 @@
-"""アトミック書き込み・root ロック（基本設計 03 §6.2、詳細設計 04 §11.1〜11.2）。"""
+"""アトミック書き込み・root ロック。"""
 
 import atexit
 import datetime
@@ -11,7 +11,7 @@ LOCK_NAME = ".kg-lock"
 
 
 def atomic_write_bytes(path: Path, data: bytes) -> None:
-    """同一ディレクトリの tmp（.<name>.tmp-<pid>）に書き os.replace（04 §11.1）。"""
+    """同一ディレクトリの tmp（.<name>.tmp-<pid>）に書き os.replace。"""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.parent / f".{path.name}.tmp-{os.getpid()}"
@@ -25,10 +25,10 @@ def atomic_write_text(path: Path, text: str) -> None:
 
 
 class RootLock:
-    """root 単位のロックファイル <root>/.kg-lock（03 §6.2）。
+    """root 単位のロックファイル <root>/.kg-lock。
 
     O_CREAT|O_EXCL による排他作成。取得失敗は即 LockError（exit 1）で、自動奪取は
-    しない。解放は try/finally と atexit の二重化（04 §11.2）。
+    しない。解放は try/finally と atexit の二重化。
     """
 
     def __init__(self, root: Path, subcommand: str):
@@ -79,8 +79,8 @@ class RootLock:
 def acquire_locks(roots, subcommand: str):
     """複数 root のロックを与えられた順に取得する。
 
-    両層に書き込む操作はグローバル → プロジェクトの順で取得する（03 §6.2 の
-    デッドロック回避規約。呼び出し側がその順で渡す）。
+    両層に書き込む操作はグローバル → プロジェクトの順で取得する
+    （デッドロック回避規約。呼び出し側がその順で渡す）。
     """
     locks = []
     try:

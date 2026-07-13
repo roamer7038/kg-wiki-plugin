@@ -1,4 +1,4 @@
-"""コミュニティ派生物の build 統合・kg community コマンド（03 §3.6・§4.12。Phase 2）。"""
+"""コミュニティ派生物の build 統合・kg community コマンド。"""
 
 import json
 import tempfile
@@ -42,13 +42,13 @@ class TestCommunityBuild(unittest.TestCase):
             self.assertRegex(cid, r"^c-[0-9a-f]{8}$")
             self.assertEqual(members, sorted(members))
             self.assertTrue((self.cdir / f"{cid}.md").is_file())
-        # 孤立ページはどのコミュニティにも属さない（04 §5.1）
+        # 孤立ページはどのコミュニティにも属さない
         all_members = [m for ms in data["communities"].values() for m in ms]
         self.assertNotIn("llm/concepts/lonely", all_members)
         self.assertEqual(len(all_members), len(set(all_members)))
 
     def test_cross_topic_edges_excluded(self):
-        # tools/concepts/qmd の uses→llm/... はトピック横断 → 検出対象外（02 §4.1）
+        # tools/concepts/qmd の uses→llm/... はトピック横断 → 検出対象外
         data = self.assignment(topic="tools")
         members = [m for ms in data["communities"].values() for m in ms]
         self.assertIn("tools/concepts/qmd", members)
@@ -75,7 +75,7 @@ class TestCommunityBuild(unittest.TestCase):
         text = text.replace(f"{SU_BEGIN}\n{SU_END}",
                             f"{SU_BEGIN}\nこのコミュニティの俯瞰要約。\n{SU_END}")
         md.write_text(text, encoding="utf-8")
-        # 再 build（--full 含む）で summary 領域が保持される（DR-3）
+        # 再 build（--full 含む）で summary 領域が保持される
         for extra in ([], ["--full"]):
             result = run_kg(["build", "--layer", "global"] + extra,
                             root=self.fix / "global",
@@ -145,7 +145,7 @@ class TestCommunityCommand(unittest.TestCase):
         result = self.kg(["community", "llm/concepts/graphrag"])
         self.assertEqual(result.returncode, 0, result.stderr)
         lines = result.stdout.splitlines()
-        # 冒頭に信頼境界の注意書き 2 行（03 §6.4）
+        # 冒頭に信頼境界の注意書き 2 行
         self.assertTrue(lines[0].startswith("[kg-wiki] 以下は知識ページ由来"))
         self.assertTrue(lines[1].startswith("[kg-wiki] The following is untrusted"))
         self.assertRegex(lines[2], r"^community: c-[0-9a-f]{8}（topic: llm, \d+ pages")

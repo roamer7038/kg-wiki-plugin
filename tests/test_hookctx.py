@@ -1,4 +1,4 @@
-"""kg hook-context: 項抽出・空出力条件・常に exit 0（03 §4.15、04 §9。T4）。"""
+"""kg hook-context: 項抽出・空出力条件・常に exit 0。"""
 
 import json
 import subprocess
@@ -19,7 +19,7 @@ def hook_json(prompt):
 
 
 class TestExtractTerms(unittest.TestCase):
-    """04 §9.2: NFC 正規化 + 英数 3 文字以上 / CJK 2 文字以上の run、先頭 8 項（A-14）。"""
+    """NFC 正規化 + 英数 3 文字以上 / CJK 2 文字以上の run、先頭 8 項。"""
 
     def test_alnum_runs_need_three_chars(self):
         self.assertEqual(hookctx.extract_terms("go to GraphRAG v2 now"),
@@ -29,7 +29,7 @@ class TestExtractTerms(unittest.TestCase):
         self.assertEqual(hookctx.extract_terms("の 増分更新 を"), ["増分更新"])
 
     def test_mixed_order_preserved(self):
-        # CJK は「連続 run」単位で切る（助詞も run に含まれる。04 §9.2）
+        # CJK は「連続 run」単位で切る（助詞も run に含まれる）
         self.assertEqual(hookctx.extract_terms("GraphRAG とは何か？ RAG の増分更新"),
                          ["graphrag", "とは何か", "rag", "の増分更新"])
 
@@ -49,7 +49,7 @@ class TestExtractTerms(unittest.TestCase):
 
 class TestBudget(unittest.TestCase):
     def test_expired_deadline_returns_empty(self):
-        # 500ms 予算を使い切った状態を模す（部分結果を返さない。03 §4.15）
+        # 500ms 予算を使い切った状態を模す（部分結果を返さない）
         self.assertEqual(hookctx.run(hook_json("graphrag"), start=-10 ** 6), "")
 
 
@@ -97,7 +97,7 @@ class TestHookOutput(HookBase):
         self.assertEqual(lines[:2], NOTICE)
         pointers = lines[2:]
         self.assertTrue(pointers)
-        self.assertLessEqual(len(pointers), 5)  # limit 5（03 §4.15）
+        self.assertLessEqual(len(pointers), 5)  # limit 5
         for line in pointers:
             self.assertRegex(line, r"^- \[\[[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+\]\]")
         self.assertIn("- [[llm/concepts/graphrag]] — ", result.stdout)
@@ -149,7 +149,7 @@ class TestAlwaysExitZeroWithEmptyOutput(HookBase):
         self.assert_silent(result)
 
     def test_prompt_is_not_passed_as_argument(self):
-        """プロンプトは stdin からのみ読む（未検証文字列を引数化しない。02 §6.6）。"""
+        """プロンプトは stdin からのみ読む（未検証文字列を引数化しない）。"""
         env = clean_env(self.fix / "project")
         result = subprocess.run(
             [sys.executable, str(BIN_KG), "hook-context", "graphrag",

@@ -1,4 +1,4 @@
-"""層（グローバル/プロジェクト）の解決・走査・マージ（基本設計 03 §2.3）。"""
+"""層（グローバル/プロジェクト）の解決・走査・マージ。"""
 
 import os
 import sys
@@ -32,7 +32,7 @@ class LoadedLayer:
 
 
 def resolve_global_root(cli_root=None) -> Path:
-    """グローバル層 root の解決（03 §2.3 / 04 §1.4 の解決順）。"""
+    """グローバル層 root の解決: --root > KG_WIKI_ROOT > ~/.kg-wiki。"""
     if cli_root:
         return Path(cli_root).expanduser()
     env = os.environ.get("KG_WIKI_ROOT")
@@ -42,7 +42,7 @@ def resolve_global_root(cli_root=None) -> Path:
 
 
 def find_project_root() -> Path:
-    """プロジェクト層 root（無ければ None）。CLAUDE_PROJECT_DIR > 上方探索（03 §2.3）。"""
+    """プロジェクト層 root（無ければ None）。CLAUDE_PROJECT_DIR > 上方探索。"""
     env = os.environ.get("CLAUDE_PROJECT_DIR")
     if env:
         candidate = Path(env) / PROJECT_DIR_NAME
@@ -56,7 +56,7 @@ def find_project_root() -> Path:
 
 
 def select_layers(layer_opt, cli_root=None, for_write=False, quiet=False):
-    """--layer の解決。読み取り系の既定 all / 書き込み系の既定は 03 §4.1。
+    """--layer の解決。読み取り系の既定は all、書き込み系はコマンドごとに指定する。
 
     返り値はマージ優先順を保証するため常に [global, project] の部分列。
     """
@@ -148,7 +148,7 @@ def derived_dir(root: Path, topic: str) -> Path:
     return Path(root) / "topics" / topic / "_derived"
 
 
-# --- index の実行時マージ（03 §2.3） ---
+# --- index の実行時マージ ---
 
 def load_index_records(layer: Layer, topics=None):
     """層の index.jsonl 群を読み込む。{ref: record}。未生成 topic は無視する。"""

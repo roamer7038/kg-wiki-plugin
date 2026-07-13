@@ -1,8 +1,8 @@
-"""kg move: ページ/トピックの移動・全被参照書換・再開収束（03 §4.8、04 §6）。
+"""kg move: ページ/トピックの移動・全被参照書換・再開収束。
 
 ファイル横断トランザクションは持たない。中断時は kg validate が不整合を検出し、
-同コマンドの再実行で収束する（FR-3.3）。再開判定はページファイルの存在のみで行う
-（04 §6.1。manifest 等の中間状態に依存しない）。
+同コマンドの再実行で収束する。再開判定はページファイルの存在のみで行う
+（manifest 等の中間状態に依存しない）。
 """
 
 import os
@@ -20,7 +20,7 @@ from .scaffold import new_page_issues
 TO_LINE_RE = re.compile(r"^(\s*(?:- )?to: )([\"']?)(.+?)\2(\s*)$")
 
 
-# --- テキストレベルの参照書換（04 §6.2） ---
+# --- テキストレベルの参照書換 ---
 
 def _rewrite_line_links(line: str, mapping: dict):
     """インラインコード外の [[old]] を書き換える。"""
@@ -92,7 +92,7 @@ def _update_own_frontmatter(text: str, new_type: str, new_slug: str) -> str:
 # --- 走査・適用 ---
 
 def _scan_rewrites(layer_list, mapping, apply: bool):
-    """全層・全ページを「層（global→project）→ ref 順」で走査し書換（04 §6.2）。
+    """全層・全ページを「層（global→project）→ ref 順」で走査し書換。
 
     [(layer, page_ref, count)] を返す。apply=False なら変更しない。
     """
@@ -157,7 +157,7 @@ def run_move_page(all_layers, old_text: str, new_text: str, to_layer,
     else:
         dest_layer = src_layer
 
-    # 再開判定（04 §6.1: ページファイルの存在のみで判定）
+    # 再開判定（ページファイルの存在のみで判定）
     if src_layer is None:
         resume_layer = _locate(all_layers, new_text)
         if resume_layer is None:
@@ -172,7 +172,7 @@ def run_move_page(all_layers, old_text: str, new_text: str, to_layer,
         if layers.page_path(dest_layer, new_text).is_file():
             raise KgError(f"衝突: {new_text} が {dest_layer.kind} 層に既存"
                           "（旧ページの処置を確認して再実行する）")
-        # 事前検証: 移動先 topic/type の config 定義（03 §4.8 (2)）
+        # 事前検証: 移動先 topic/type の config 定義
         cfg, cfg_issues, exists = config_mod.load_config(dest_layer.root)
         if not exists:
             raise KgError(f"config.yml がない: {dest_layer.root}（kg init で初期化する）")
@@ -196,7 +196,7 @@ def run_move_page(all_layers, old_text: str, new_text: str, to_layer,
                                   f"{count} 箇所の参照を書換（{layer.kind} 層）"))
         return plan, 0, []
 
-    # 適用（(3) ページ移動 → 被参照書換 → build 増分 → log。03 §4.8）
+    # 適用（(3) ページ移動 → 被参照書換 → build 増分 → log）
     if not resumed:
         old_path = layers.page_path(src_layer, old_text)
         text = old_path.read_bytes().decode("utf-8", errors="replace")
@@ -234,7 +234,7 @@ def run_move_page(all_layers, old_text: str, new_text: str, to_layer,
 
 def run_rename_topic(all_layers, target_layer, old_topic: str, new_topic: str,
                      dry_run: bool, date, quiet=False):
-    """topic 一括改名（03 §4.8、04 §6.3）。(issues, exit_code, stdout_lines)。"""
+    """topic 一括改名。(issues, exit_code, stdout_lines)。"""
     issues = []
     for name in (old_topic, new_topic):
         if not refs.is_slug(name):
@@ -255,7 +255,7 @@ def run_rename_topic(all_layers, target_layer, old_topic: str, new_topic: str,
         return [Issue("error", "ref-exists", new_topic,
                       f"config に {new_topic} が既存（改名の衝突）")], 2, []
 
-    # 対象ページと mapping（既移動分も含めて書換対象にする = 再開収束。04 §6.3）
+    # 対象ページと mapping（既移動分も含めて書換対象にする = 再開収束）
     mapping = {}
     moves = []  # (old_ref, new_ref, path)
     for type_dir, slug, path in layers.iter_page_paths(target_layer.root, old_topic):
@@ -278,7 +278,7 @@ def run_rename_topic(all_layers, target_layer, old_topic: str, new_topic: str,
                               f"{count} 箇所の参照を書換（{layer.kind} 層）"))
         return plan, 0, []
 
-    # ページ単位の状態判定・移動（04 §6.3: 一部移動済みでも残りから続行）
+    # ページ単位の状態判定・移動（一部移動済みでも残りから続行）
     for old_ref, new_ref, path in moves:
         new_path = layers.page_path(target_layer, new_ref)
         if new_path.is_file():
@@ -297,7 +297,7 @@ def run_rename_topic(all_layers, target_layer, old_topic: str, new_topic: str,
         import shutil
         shutil.rmtree(old_dir)
 
-    # config 更新は全ページ移動完了後（04 §6.3）
+    # config 更新は全ページ移動完了後
     if old_topic in names:
         config_path = Path(target_layer.root) / config_mod.CONFIG_NAME
         text = config_path.read_text(encoding="utf-8")

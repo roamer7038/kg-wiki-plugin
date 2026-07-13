@@ -1,4 +1,4 @@
-"""コミュニティ検出の unit test: 04 §5.1 手計算例・ID 導出・継承規則（Phase 2）。"""
+"""コミュニティ検出の unit test: 手計算例・ID 導出・継承規則。"""
 
 import hashlib
 import unittest

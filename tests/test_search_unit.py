@@ -1,6 +1,6 @@
-"""kg search スコアリング: 04 §3.3 の手計算 5 例を期待値ハードコードで検証（T6）。
+"""kg search スコアリング: 手計算 5 例を期待値ハードコードで検証。
 
-golden ではなく unit test として実装初期に固定する（04 §12）。
+golden ではなく unit test として実装初期に固定する。
 """
 
 import unittest
@@ -38,7 +38,7 @@ def score(query, page_key, no_body=False):
 
 
 class TestCalcExamples(unittest.TestCase):
-    """04 §3.3 の表の 5 例（最終スコア列と一致すること）。"""
+    """手計算 5 例（最終スコアと一致すること）。"""
 
     def test_example1_knowledge(self):
         self.assertEqual(output.fmt_score(score("knowledge", "page1")), "6.00")

@@ -1,7 +1,7 @@
-"""kg build パイプライン（方式設計 02 §4、基本設計 03 §4.3）。
+"""kg build パイプライン。
 
 topic 単位の純関数パイプライン。派生物を書き終えてから manifest を最後に
-アトミック書き込みする（03 §6.2 の収束規約、04 §11.3）。
+アトミック書き込みする（収束規約）。
 """
 
 from dataclasses import dataclass, field
@@ -74,13 +74,13 @@ def build_topic(layer, cfg, topic: str, full: bool) -> TopicResult:
             if rec is None or rec.get("hash") != current[ref][2]:
                 to_parse.add(ref)  # index 側の欠落・乖離 → 再抽出
             elif rec.get("layer") != layer.kind:
-                to_parse.add(ref)  # 層の複製（03 §3.3）→ 変更扱い
+                to_parse.add(ref)  # 層の複製 → 変更扱い
                 layer_changed.append(ref)
             elif rec.get("type") not in cfg.types or any(
                     rel != graph.MENTIONS and rel not in cfg.relations
                     for _f, rel, _t, _s in old_edges_by_from.get(ref, ())):
                 # config 変更（使用中 type/rel の削除等）→ 再検証して全再生成と
-                # 同じ中断挙動にする（NFR-1 の増分・全再生成一致）
+                # 同じ中断挙動にする（増分・全再生成一致）
                 to_parse.add(ref)
     else:
         to_parse = set(current)
@@ -112,7 +112,7 @@ def build_topic(layer, cfg, topic: str, full: bool) -> TopicResult:
 
     adj = graph.adjacency_data(edges, records.keys())
 
-    # (5) コミュニティ検出（Phase 2。増分でも毎回グラフ全体で再計算する。02 §4.1）
+    # (5) コミュニティ検出（増分でも毎回グラフ全体で再計算する）
     from . import community
     weights = community.build_weights(edges, set(records))
     communities = community.detect(weights)

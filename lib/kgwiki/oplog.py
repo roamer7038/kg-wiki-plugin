@@ -1,6 +1,6 @@
-"""log.md への追記（基本設計 03 §2.4、§4.10）。
+"""log.md への追記。
 
-構造操作はスクリプト経由（C-2）: LLM・スキルによる log.md 直接編集は禁止で、
+構造操作はスクリプト経由: LLM・スキルによる log.md 直接編集は禁止で、
 追記は本モジュール（kg の各書き込みコマンド・kg log）経由に限る。
 """
 
@@ -11,8 +11,8 @@ from .errors import KgError
 from .layers import scan_page_refs
 
 LOG_NAME = "log.md"
-# 03 §2.4 の op 一覧。kg log が受け付けるのは ingest のみで、他は各コマンドが
-# 自身で記録する（§4.10）
+# op 一覧。kg log が受け付けるのは ingest のみで、他は各コマンドが
+# 自身で記録する
 OPS = ("init", "new", "ingest", "move", "skillgen", "skill-install")
 LOG_CMD_OP = "ingest"
 
@@ -36,7 +36,7 @@ def append(root: Path, line: str) -> None:
 
 
 def run_log_ingest(layer_list, ref: str, source: str, date) -> object:
-    """kg log ingest（03 §4.10）。記録先の層（Layer）を返す。
+    """kg log ingest。記録先の層（Layer）を返す。
 
     layer_list はグローバル → プロジェクトの順（両層に存在する場合は
     プロジェクト層に記録する）。

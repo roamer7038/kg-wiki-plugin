@@ -1,4 +1,4 @@
-"""ページの読み込み・frontmatter スキーマ検証・本文処理（基本設計 03 §1）。"""
+"""ページの読み込み・frontmatter スキーマ検証・本文処理。"""
 
 import re
 import unicodedata
@@ -16,7 +16,7 @@ FENCE_RE = re.compile(r"^ {0,3}(```|~~~)")
 INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
 H1_RE = re.compile(r"^#( |$)")
 LIST_RE = re.compile(r"^(?:[-*+] |\d+[.)] )")
-SUMMARY_LIMIT = 120  # コードポイント（03 §3.3）
+SUMMARY_LIMIT = 120  # コードポイント
 
 
 @dataclass
@@ -50,7 +50,7 @@ class Page:
 
 
 def split_frontmatter(text: str):
-    """(fm_lines, body, fatal_message) を返す。fatal 時は fm_lines=None（04 §2.3 規則 3）。"""
+    """(fm_lines, body, fatal_message) を返す。fatal 時は fm_lines=None（回復不能）。"""
     lines = text.split("\n")
     if not lines or lines[0] != "---":
         return None, "", "frontmatter 開始 '---' がない"
@@ -82,7 +82,7 @@ def body_lines_flags(body: str):
 
 
 def mask_inline_code(line: str) -> str:
-    """インラインコード区間を同長の空白に置換する（リンク抽出の除外用。03 §1.3）。"""
+    """インラインコード区間を同長の空白に置換する（リンク抽出の除外用）。"""
     return INLINE_CODE_RE.sub(lambda m: " " * len(m.group(0)), line)
 
 
@@ -104,7 +104,7 @@ def body_has_h1(body: str) -> bool:
 
 
 def extract_summary(body: str) -> str:
-    """本文の最初の本文段落行を 120 コードポイントで切り詰めて返す（03 §3.3）。
+    """本文の最初の本文段落行を 120 コードポイントで切り詰めて返す。
 
     見出し・コードブロック・リスト・引用・表・HTML コメントを除く非空行。
     該当行が無ければ空文字列。
@@ -157,7 +157,7 @@ def load_page(path: Path, layer_kind: str, topic: str, type_dir: str, config):
 
     raw = path.read_bytes()
     text = raw.decode("utf-8", errors="replace")
-    text = text.replace("\r\n", "\n")  # 規約は LF（03 §1.4）。CRLF は寛容に読む
+    text = text.replace("\r\n", "\n")  # 規約は LF。CRLF は寛容に読む
     fm_lines, body, fatal = split_frontmatter(text)
     if fatal is not None:
         _err(issues, "fm-parse", ref, fatal)
@@ -316,6 +316,6 @@ def load_page(path: Path, layer_kind: str, topic: str, type_dir: str, config):
 
 
 def normalize_text(s: str) -> str:
-    """検索用正規化: Unicode NFC + ASCII のみ小文字化（03 §4.4）。"""
+    """検索用正規化: Unicode NFC + ASCII のみ小文字化。"""
     s = unicodedata.normalize("NFC", s)
     return "".join(chr(ord(c) + 32) if "A" <= c <= "Z" else c for c in s)

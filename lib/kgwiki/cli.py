@@ -1,6 +1,6 @@
-"""argparse 構築・サブコマンド dispatch・exit code 変換（詳細設計 04 §1.3〜1.4）。
+"""argparse 構築・サブコマンド dispatch・exit code 変換。
 
-サブコマンド実装は遅延 import（起動時間短縮。A-15）。
+サブコマンド実装は遅延 import（起動時間短縮）。
 """
 
 import argparse
@@ -10,10 +10,6 @@ import sys
 from . import __version__
 from .errors import (FeatureDisabledError, KgError, LockError, UsageError,
                      ValidationFailure)
-
-CURRENT_PHASE = 3
-# 未実装 Phase のサブコマンド → exit 4（03 §4.1）。Phase 3 時点で該当なし
-PHASE_GATE = {}
 
 
 class _ArgParser(argparse.ArgumentParser):
@@ -110,7 +106,7 @@ def build_parser():
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
 
-    # プロンプトは stdin の hook JSON からのみ読む（引数化しない。02 §6.6）
+    # プロンプトは stdin の hook JSON からのみ読む（引数化しない）
     sp = sub.add_parser("hook-context", help="UserPromptSubmit hook 用の軽量注入")
     sp.add_argument("--root", metavar="PATH")
     sp.add_argument("--debug", action="store_true")
@@ -138,10 +134,6 @@ def build_parser():
     sp.add_argument("--source", required=True, metavar="URL|PATH")
     _add_common(sp, write=True, with_limit=False,
                 layer_choices=("global", "project"))
-
-    for name in PHASE_GATE:
-        sp = sub.add_parser(name)
-        sp.add_argument("args", nargs=argparse.REMAINDER)
 
     return p
 
@@ -242,7 +234,7 @@ def cmd_build(args):
             failed = True
             _print_issues(result.issues, args.json)
     if not failed:
-        # (6) qmd 側 index の同期（有効時のみ。失敗は警告にとどめ exit 0。03 §4.3）
+        # (6) qmd 側 index の同期（有効時のみ。失敗は警告にとどめ exit 0）
         from . import qmdfacade
         if qmdfacade.enabled_by_config([layer]) and qmdfacade.qmd_path() is not None:
             try:
@@ -307,7 +299,7 @@ def cmd_validate(args):
     if args.quick:
         try:
             print(validate.run_quick(_read_layers(args), cli_root=args.root))
-        except Exception:  # hook 用: 常に exit 0（03 §4.1）
+        except Exception:  # hook 用: 常に exit 0
             pass
         return 0
     issues = validate.run_validate(_read_layers(args), topics=_topics(args),
@@ -435,7 +427,7 @@ def cmd_community(args):
             "topic": topic,
         }))
         return 0
-    for line in output.TRUST_NOTICE:  # 俯瞰供給 = 本文非返却の例外（03 §4.12）
+    for line in output.TRUST_NOTICE:  # 俯瞰供給 = 本文非返却の例外
         print(line)
     if stale:
         print("[kg-wiki] 警告: この要約は stale（ソース変更後に再執筆されていない）。"
@@ -455,7 +447,7 @@ def cmd_community(args):
 
 
 def cmd_hook_context(args):
-    """hook 専用: 常に exit 0（空出力で正常終了する。03 §4.1・§4.15）。"""
+    """hook 専用: 常に exit 0（空出力で正常終了する）。"""
     import time
     start = time.monotonic()
     try:
@@ -489,7 +481,7 @@ def cmd_skillgen(args):
             print(path)
             return 0
 
-        # --install: 当該 Skill の事前検証（03 §4.14。エラーがあれば exit 2）
+        # --install: 当該 Skill の事前検証（エラーがあれば exit 2）
         loaded = [layers.load_layer(layer, topics=[topic])]
         target = f"{layer.kind}:{topic}/skills/{name}"
         issues = validate.skill_file_issues(path, name, target, loaded)
@@ -536,7 +528,7 @@ def cmd_pack(args):
         raise KgError("収集対象が 0 件（クエリ・ref を見直す）")
     if over_budget:
         # 省略一覧のバイトも計上するため、極端に小さい上限では最小出力が上限を超える。
-        # 打ち切らずに出力し警告のみとする（決定論を優先。04 §7.2）
+        # 打ち切らずに出力し警告のみとする（決定論を優先）
         print(f"kg pack: 警告: 出力が上限超過（--max-bytes {args.max_bytes} に対し "
               f"{len(text.encode('utf-8'))} バイト）。省略一覧のバイト計上のため打ち切らない",
               file=sys.stderr)
@@ -556,7 +548,7 @@ def cmd_log(args):
         others = ", ".join(op for op in oplog.OPS if op != oplog.LOG_CMD_OP)
         raise UsageError(
             f"kg log の op は {oplog.LOG_CMD_OP} のみ"
-            f"（{others} は各コマンドが自身で記録する。03 §4.10）")
+            f"（{others} は各コマンドが自身で記録する）")
     _check_ref_arg(args.ref)
     date = _parse_date(args.date)
     if args.layer in ("global", "project"):
@@ -611,11 +603,6 @@ def main(argv=None) -> int:
         debug = bool(getattr(args, "debug", False))
         if not sub_name:
             raise UsageError(f"サブコマンドが必要\n{parser.format_usage().rstrip()}")
-        if sub_name in PHASE_GATE:
-            phase, message = PHASE_GATE[sub_name]
-            raise FeatureDisabledError(
-                f"{message}（現行 Phase {CURRENT_PHASE}）。"
-                "有効化: プラグインの更新を待つか、リポジトリの Phase 対応版を導入する")
         return HANDLERS[sub_name](args)
     except UsageError as e:
         print(f"{prefix}: error: {e}", file=sys.stderr)
@@ -632,7 +619,7 @@ def main(argv=None) -> int:
         return 1
     except BrokenPipeError:
         return 1
-    except Exception as e:  # 予期しない例外 → exit 1（04 §1.3）
+    except Exception as e:  # 予期しない例外 → exit 1
         print(f"{prefix}: error: 予期しないエラー: {e}", file=sys.stderr)
         if debug:
             import traceback

@@ -1,9 +1,9 @@
-"""qmd 委譲ファサード（02 §2.3・§4.2、03 §4.11、04 §8）。
+"""qmd 委譲ファサード。
 
-qmd 固有の概念（コレクション・チャンク・sqlite index）は本モジュール外に出さない
-（A-9）。サブプロセスは常に引数配列で起動する（NFR-6）。
+qmd 固有の概念（コレクション・チャンク・sqlite index）は本モジュール外に出さない。
+サブプロセスは常に引数配列で起動する。
 
-コマンド体系・JSON 形式は qmd 2.5.3 で実機確認済み（04 §8.4 の消化）:
+コマンド体系・JSON 形式は qmd 2.5.3 で実機確認済み:
   - 検索: `qmd vsearch|query <q> --json --full-path -n <N> -c <collection>`
     stdout = JSON 配列（フィールド: score / file / line / title / snippet）。
     進捗・クエリ拡張の表示は stderr。
@@ -26,7 +26,7 @@ from . import refs
 from .errors import FeatureDisabledError, KgError
 from .layers import GLOBAL
 
-# プラグイン同梱の動作確認済みバージョンレンジ（03 §2.2。2026-07-13 に 2.5.3 で確認）
+# プラグイン同梱の動作確認済みバージョンレンジ（2026-07-13 に 2.5.3 で確認）
 VERIFIED_VERSION_RANGE = "2.5"
 
 # pages/ 配下の Markdown のみをインデックスする（_derived 等を除外）
@@ -39,7 +39,7 @@ def qmd_path():
 
 
 def collection_name(layer) -> str:
-    """コレクション命名（04 §8.2）。プロジェクト root = .kg-wiki の親と解釈する。"""
+    """コレクション命名。プロジェクト root = .kg-wiki の親と解釈する。"""
     if layer.kind == GLOBAL:
         return "kgwiki-global"
     project_root = Path(layer.root).resolve().parent
@@ -48,7 +48,7 @@ def collection_name(layer) -> str:
 
 
 def enabled_by_config(layer_list) -> bool:
-    """設定値の解決（02 §2.3: 環境変数 > config.yml > 既定 false）。
+    """設定値の解決（環境変数 > config.yml > 既定 false）。
 
     複数層選択時はいずれかの層の config が有効なら有効とみなす。
     """
@@ -63,7 +63,7 @@ def enabled_by_config(layer_list) -> bool:
 
 
 def require_enabled(layer_list) -> None:
-    """有効化条件の AND 検査（02 §2.3）。欠ける場合 FeatureDisabledError（exit 4）。"""
+    """有効化条件の AND 検査。欠ける場合 FeatureDisabledError（exit 4）。"""
     if not enabled_by_config(layer_list):
         raise FeatureDisabledError(
             "qmd 連携が無効。有効化: kg init --with-qmd（config の qmd.enabled: true）"
@@ -114,7 +114,7 @@ def _run_json(args_list):
 
 
 def map_results(items, layer_roots):
-    """チャンク結果 → ref への決定論的写像・重複排除（04 §8.3）。
+    """チャンク結果 → ref への決定論的写像・重複排除。
 
     items: qmd の返却順（= ランク順）の [{"file": ..., "score": ...}]。
     layer_roots: [(kind, root_path)]。
@@ -158,7 +158,7 @@ def map_results(items, layer_roots):
 
 
 def search(mode: str, query: str, layer_list, topics, limit: int):
-    """vsearch / hybrid の委譲実行（03 §4.11）。[(score, ref, kind)] を返す。"""
+    """vsearch / hybrid の委譲実行。[(score, ref, kind)] を返す。"""
     import sys
 
     subcmd = "vsearch" if mode == "vsearch" else "query"
@@ -209,7 +209,7 @@ def register_collection(layer) -> str:
 
 
 def sync(root) -> None:
-    """kg build ステップ (6): qmd 側 index の同期 + 不足ベクトルの生成（02 §4）。
+    """kg build ステップ (6): qmd 側 index の同期 + 不足ベクトルの生成。
 
     失敗は例外（呼び出し側で警告化し exit 0 を維持する）。差分なしなら合計 0.2 秒程度。
     """

@@ -1,4 +1,4 @@
-"""kg pack: 収集規則・バイト計上・省略一覧・注意書き（03 §4.13、04 §7。T2）。"""
+"""kg pack: 収集規則・バイト計上・省略一覧・注意書き。"""
 
 import tempfile
 import unittest
@@ -142,13 +142,13 @@ class TestMaxBytes(PackBase):
         budget = len(full.stdout.encode("utf-8")) // 2
         result = self.pack(["graphrag", "--limit", "5", "--max-bytes", str(budget)])
         self.assertEqual(result.returncode, 0, result.stderr)
-        # 目次は収集全 ref（採否によらず。04 §7.1）
+        # 目次は収集全 ref（採否によらず）
         self.assertEqual(self.toc_refs(result.stdout), self.toc_refs(full.stdout))
         kept = self.page_refs(result.stdout)
         omitted = self.omitted_refs(result.stdout)
         self.assertTrue(omitted)
         self.assertEqual(sorted(kept + omitted), self.toc_refs(full.stdout))
-        # 採用分（固定部 + 省略部見出し + 採用ブロック）は予算内に収まる（04 §7.2）。
+        # 採用分（固定部 + 省略部見出し + 採用ブロック）は予算内に収まる。
         # 省略行のバイトは予算を超えて計上され得るため、出力全体は B を超え得る
         omit_bytes = sum(pack.block_bytes([f"- [[{ref}]]"]) for ref in omitted)
         self.assertLessEqual(len(result.stdout.encode("utf-8")) - omit_bytes, budget)
@@ -194,7 +194,7 @@ class TestOut(PackBase):
 
 
 class TestSelectUnit(unittest.TestCase):
-    """採否アルゴリズム（04 §7.2）の逐次貪欲を直接検証する。"""
+    """採否アルゴリズムの逐次貪欲を直接検証する。"""
 
     def test_omission_heading_and_line_bytes(self):
         self.assertEqual(pack.OMIT_HEADING, "## 省略（--max-bytes 超過）")

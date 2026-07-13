@@ -1,4 +1,4 @@
-"""kg skillgen / kg validate --skills（03 §3.7・§4.14、02 §6.7。T3）。"""
+"""kg skillgen / kg validate --skills。"""
 
 import tempfile
 import unittest
@@ -70,7 +70,7 @@ class TestGenerate(SkillgenBase):
         self.assertIn("name: kg-llm", text)
         self.assertIn("kg_source: topic:llm", text)
         self.assertIn("built_from: sha256:", text)
-        # 信頼境界の注意書き（03 §6.4。完全一致）
+        # 信頼境界の注意書き（完全一致）
         for line in NOTICE:
             self.assertIn(line, text)
         # 4 マーカーと骨格の参照ページ一覧（ref + summary、ref 順）

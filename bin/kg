@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""kg-wiki CLI エントリポイント（薄いラッパ。詳細設計 04 §1.1）。"""
+"""kg-wiki CLI エントリポイント（薄いラッパ）。"""
 import os
 import sys
 

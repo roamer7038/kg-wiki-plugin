@@ -1,21 +1,21 @@
-"""YAML サブセットパーサ（基本設計 03 §1.4、詳細設計 04 §2）。
+"""YAML サブセットパーサ。
 
 行指向の 2 段文法（字句 + インデントスタック）の再帰下降実装。
-エラー回復規則（04 §2.3）:
+エラー回復規則:
   1. content-line の構文エラーは issue 1 件を記録して行ごと読み飛ばす
      （インデントスタックと直前の有効状態は変更しない）。
   2. 重複キーは最初の定義を保持し、後続の定義行を読み飛ばす。
   3. frontmatter 開始/終了 `---` の欠落は回復不能（呼び出し側 pages.py が扱う）。
 
-日付は datetime.date、真偽は bool、整数は int として返す（04 §2.2 の型推論。
-実在しない日付は str に落ち、スキーマ検証で検出される）。
+日付は datetime.date、真偽は bool、整数は int として返す。
+実在しない日付は str に落ち、スキーマ検証で検出される。
 """
 
 import datetime
 import re
 from dataclasses import dataclass
 
-# plain-first の除外集合（04 §2.1）。これらで始まる未引用値はエラー。
+# plain-first の除外集合。これらで始まる未引用値はエラー。
 PLAIN_FIRST_FORBIDDEN = set('"\'[#&*!|>%@ ')
 KEY_RE = re.compile(r"^([A-Za-z0-9_-]+):(.*)$")
 INT_RE = re.compile(r"^-?[0-9]+$")
@@ -40,7 +40,7 @@ class _ErrorRecovery(Exception):
 
 
 def _infer_scalar(text: str):
-    """未引用スカラーの型推論（04 §2.2）。"""
+    """未引用スカラーの型推論。"""
     if text == "true":
         return True
     if text == "false":
@@ -70,7 +70,7 @@ class _Parser:
     # --- スカラー ---
 
     def _parse_dq(self, text: str, lineno: int):
-        """二重引用符。\\\" と \\\\ のみエスケープ許容（04 §2.2）。(値, 残り) を返す。"""
+        """二重引用符。\\\" と \\\\ のみエスケープ許容。(値, 残り) を返す。"""
         out = []
         i = 1
         while i < len(text):
@@ -117,7 +117,7 @@ class _Parser:
         return text.rstrip(" ")  # PB2
 
     def _forbidden_first(self, c: str, lineno: int, context: str) -> None:
-        """plain-first 除外集合による禁止構文の検出（04 §2.1 の表）。"""
+        """plain-first 除外集合による禁止構文の検出。"""
         if c in ("&", "*"):
             self._issue(lineno, "アンカー/エイリアスは不可")
         elif c == "!":

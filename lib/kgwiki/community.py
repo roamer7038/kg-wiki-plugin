@@ -1,6 +1,6 @@
-"""コミュニティ検出（CNM 貪欲法）と kg community コマンド（02 §4.1、03 §3.6・§4.12、04 §5）。
+"""コミュニティ検出（CNM 貪欲法）と kg community コマンド。
 
-決定論規約: ΔQ は浮動小数を使わず整数比較キー 2m×W − K×K で評価し（A-17）、
+決定論規約: ΔQ は浮動小数を使わず整数比較キー 2m×W − K×K で評価し、
 タイブレークは最小 ref の辞書順ペア。ID 継承の Jaccard 比較は Fraction で厳密に行う。
 """
 
@@ -21,13 +21,13 @@ MARK_SU_BEGIN = "<!-- kg:summary:begin -->"
 MARK_SU_END = "<!-- kg:summary:end -->"
 
 
-# --- 検出（04 §5.1） ---
+# --- 検出 ---
 
 def build_weights(edges, member_refs):
-    """topic 内グラフの無向重み {(a, b): 行数}（a < b、自己エッジ除外。03 §3.4）。
+    """topic 内グラフの無向重み {(a, b): 行数}（a < b、自己エッジ除外）。
 
-    トピック横断エッジ・非ページ端点はコミュニティ検出の対象外（02 §4.1、
-    member_refs = その topic の index に載る全 ref）。
+    トピック横断エッジ・非ページ端点はコミュニティ検出の対象外
+    （member_refs = その topic の index に載る全 ref）。
     """
     weights = {}
     for from_ref, _rel, to_ref, _src in edges:
@@ -42,7 +42,7 @@ def build_weights(edges, member_refs):
 def detect(weights):
     """CNM 貪欲法。[[member_ref, ...]（ref 順）]（コミュニティは最小 ref 順）。
 
-    孤立ノード（エッジ 0）は weights に現れないため最初から除外される（04 §5.1）。
+    孤立ノード（エッジ 0）は weights に現れないため最初から除外される。
     """
     nodes = sorted({n for pair in weights for n in pair})
     if not nodes:
@@ -71,7 +71,7 @@ def detect(weights):
         if best is None or best[0] <= 0:
             break
         _dq, _tie, i, j = best
-        # j を i へマージ（04 §5.1 手順 3: K_uv = K_u + K_v、W_(uv)x = W_ux + W_vx）
+        # j を i へマージ（K_uv = K_u + K_v、W_(uv)x = W_ux + W_vx）
         members[i] |= members.pop(j)
         min_ref[i] = min(min_ref[i], min_ref.pop(j))
         degree[i] += degree.pop(j)
@@ -91,13 +91,13 @@ def detect(weights):
 
 
 def community_id(members) -> str:
-    """ID 導出（04 §5.2）: 所属 ref を昇順 LF 連結した UTF-8 の sha256 先頭 8 桁。"""
+    """ID 導出: 所属 ref を昇順 LF 連結した UTF-8 の sha256 先頭 8 桁。"""
     digest = hashlib.sha256("\n".join(sorted(members)).encode("utf-8")).hexdigest()
     return f"c-{digest[:8]}"
 
 
 def assign_ids(communities, old_assignment):
-    """ID 継承（04 §5.3）: Jaccard ≥ 1/2 の旧コミュニティから貪欲マッチングで継承。
+    """ID 継承: Jaccard ≥ 1/2 の旧コミュニティから貪欲マッチングで継承。
 
     communities は detect() の返り値。{index: id} を返す。
     """
@@ -129,7 +129,7 @@ def assign_ids(communities, old_assignment):
     return ids
 
 
-# --- 派生物（03 §3.6） ---
+# --- 派生物 ---
 
 def assignment_data(communities, ids) -> dict:
     return {
@@ -158,7 +158,7 @@ def load_assignment(derived: Path):
 def parse_community_md(text: str):
     """(fm_lines, skeleton_lines, summary_lines, errors) に分解する。
 
-    マーカーは 4 行の完全一致文字列（03 §3.6）。欠落・重複・順序違反は errors。
+    マーカーは 4 行の完全一致文字列。欠落・重複・順序違反は errors。
     """
     lines = text.split("\n")
     errors = []
@@ -197,13 +197,13 @@ def summary_region(text: str):
 
 
 def members_hash(members, records) -> str:
-    """所属ページの集合ハッシュ（built_from。03 §3.6）。"""
+    """所属ページの集合ハッシュ（built_from）。"""
     return hashing.set_hash({ref: records[ref]["hash"] for ref in members
                              if ref in records})
 
 
 def community_md_text(topic, cid, members, records, edges, existing_summary) -> str:
-    """コミュニティ要約 md（骨格 = 生成、summary 領域 = 保持。03 §3.6）。"""
+    """コミュニティ要約 md（骨格 = 生成、summary 領域 = 保持）。"""
     member_set = set(members)
     rel_counts = {}
     for from_ref, rel, to_ref, _src in edges:
@@ -236,7 +236,7 @@ def community_md_text(topic, cid, members, records, edges, existing_summary) -> 
     return "\n".join(lines)
 
 
-# --- kg community コマンド（03 §4.12） ---
+# --- kg community コマンド ---
 
 def _find_assignment(layer_list, topic):
     """topic の assignment を持つ層を global → project 順で列挙する。"""
