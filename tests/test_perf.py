@@ -57,6 +57,22 @@ class TestPerformance(unittest.TestCase):
                   f"search {elapsed_search:.2f}s, traverse {elapsed_traverse:.2f}s",
                   file=sys.stderr)
 
+    def test_dense_graph_community(self):
+        # 密グラフでのコミュニティ検出 < 5 秒（03 §7.2「性能（密グラフ）」）
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "dense-wiki"
+            subprocess.run(
+                [sys.executable, str(PLUGIN_ROOT / "tests/perf/gen_fixture.py"),
+                 "--pages", "500", "--edges-per-page", "30", "--root", str(root)],
+                check=True, capture_output=True)
+            start = time.monotonic()
+            result = run_kg(["build", "--layer", "global"], root=root)
+            elapsed = time.monotonic() - start
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertLess(elapsed, 5.0, f"dense build+detect {elapsed:.2f}s")
+            print(f"\nperf: dense-graph build+community {elapsed:.2f}s",
+                  file=sys.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

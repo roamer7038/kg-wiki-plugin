@@ -31,13 +31,22 @@ class TestExitCodes(unittest.TestCase):
         self.assertEqual(result.returncode, 3)
 
     def test_phase_gates_exit4(self):
-        for args in (["vsearch", "q"], ["hybrid", "q"], ["community", "x"],
-                     ["pack", "q"], ["skillgen", "topic:llm"], ["hook-context"]):
+        for args in (["pack", "q"], ["skillgen", "topic:llm"], ["hook-context"]):
             with self.subTest(args=args):
                 result = run_kg(args)
                 self.assertEqual(result.returncode, 4, result.stderr)
                 self.assertIn("Phase", result.stderr)
                 self.assertEqual(result.stdout, "")
+
+    def test_qmd_disabled_exit4(self):
+        # qmd 無効（既定）では vsearch / hybrid のみ exit 4 + 有効化手順（03 §6.3）
+        with tempfile.TemporaryDirectory() as tmp:
+            for args in (["vsearch", "q"], ["hybrid", "q"]):
+                with self.subTest(args=args):
+                    result = run_kg(args, root=Path(tmp) / "w")
+                    self.assertEqual(result.returncode, 4, result.stderr)
+                    self.assertIn("有効化", result.stderr)
+                    self.assertEqual(result.stdout, "")
 
     def test_version(self):
         result = run_kg(["--version"])

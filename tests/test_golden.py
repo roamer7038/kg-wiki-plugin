@@ -38,6 +38,10 @@ COMMANDS = [
     ("path-json", ["path", "llm/entities/microsoft", "llm/concepts/rag", "--json"]),
     ("validate-all", ["validate"]),
     ("validate-json", ["validate", "--json"]),
+    # Phase 2: コミュニティ
+    ("community-graphrag", ["community", "llm/concepts/graphrag"]),
+    ("community-graphrag-json", ["community", "llm/concepts/graphrag", "--json"]),
+    ("community-query", ["community", "--query", "graphrag"]),
 ]
 
 
