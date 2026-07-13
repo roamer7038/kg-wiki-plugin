@@ -10,7 +10,7 @@
     "wiki_root": {
       "type": "directory",
       "title": "グローバル層ルート",
-      "default": "~/kg-wiki",
+      "default": "~/.kg-wiki",
       "description": "知識リポジトリ（グローバル層）のルートディレクトリ"
     },
     "enable_hook_context": {

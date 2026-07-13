@@ -8,7 +8,7 @@ Markdown 知識リポジトリ + 派生ナレッジグラフによる Claude Cod
 - 真のソースは frontmatter 付き Markdown ページ（`<topic>/<type>/<slug>`）
 - `kg build` が index / KG トリプル / 隣接リストを決定論的に生成（増分・冪等）
 - 検索・走査・検証・移動はすべて単一 CLI `bin/kg` のサブコマンド
-- 知識はグローバル層（`~/kg-wiki`）とプロジェクト層（`<project>/.kg-wiki`）の 2 層
+- 知識はグローバル層（`~/.kg-wiki`）とプロジェクト層（`<project>/.kg-wiki`）の 2 層
 
 ## インストール（開発中）
 
@@ -61,14 +61,14 @@ permissions を併用する（方式設計 02 §6.5）:
 
 | キー | 既定 | 用途 |
 |---|---|---|
-| `wiki_root` | `~/kg-wiki` | グローバル層ルート（環境変数 `KG_WIKI_ROOT` でも指定可） |
+| `wiki_root` | `~/.kg-wiki` | グローバル層ルート（環境変数 `KG_WIKI_ROOT` でも指定可） |
 | `enable_hook_context` | true | UserPromptSubmit での関連ページポインタ注入（環境変数 `CLAUDE_PLUGIN_OPTION_ENABLE_HOOK_CONTEXT=false` で無効化） |
 | `enable_qmd` | false | qmd 委譲のベクトル/ハイブリッド検索（`kg init --with-qmd` が設定する。環境変数 `CLAUDE_PLUGIN_OPTION_ENABLE_QMD` が優先） |
 
 **hook 注入と `wiki_root` の注意**: Claude Code の制約により、hook プロセスは userConfig の値を
 受け取れない（`${user_config.KEY}` は hook コマンドで展開されず、`CLAUDE_PLUGIN_OPTION_*` も
 hook プロセスには渡らない。詳細設計 04 §10）。そのため **UserPromptSubmit の注入は `wiki_root`
-の設定を見ない**（既定 `~/kg-wiki` を対象とする）。既定以外の場所にグローバル層を置く場合は、
+の設定を見ない**（既定 `~/.kg-wiki` を対象とする）。既定以外の場所にグローバル層を置く場合は、
 シェル環境に `KG_WIKI_ROOT` を設定すること。未設定でも hook は空出力・exit 0 で安全に終わるが、
 注入は機能しない（無言で何も起きない状態になる）。
 
