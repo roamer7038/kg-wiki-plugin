@@ -4,8 +4,8 @@ hook 経路の規約: **常に exit 0**。無効化・0 件・内部エラー・
 空出力で正常終了する（部分結果は返さない）。プロンプトは stdin の hook JSON からのみ
 読み（未検証文字列を引数化しない。02 §6.6）、出力には信頼境界の注意書きを付す。
 
-`enable_hook_context` の伝達は環境変数のみに依存する。hook コマンドへの
-`${user_config.KEY}` 展開は実機で不成立（04 §10 (a)）。未設定時は既定の有効とする。
+注入の有効/無効は環境変数 `KG_WIKI_HOOK_CONTEXT` のみで判定する（04 §10 (a)）。
+未設定時は既定の有効とする。
 """
 
 import json
@@ -18,7 +18,7 @@ from . import output
 from . import pages as pages_mod
 from . import search as search_mod
 
-ENV_ENABLE = "CLAUDE_PLUGIN_OPTION_ENABLE_HOOK_CONTEXT"
+ENV_ENABLE = "KG_WIKI_HOOK_CONTEXT"
 BUDGET_SEC = 0.5   # 自己打ち切り（03 §4.15。hook timeout に依存しない一次防衛）
 MAX_TERMS = 8      # 先頭 8 項で打ち切る（A-14）
 LIMIT = 5          # ポインタは最大 5 件（03 §4.15）
@@ -30,7 +30,7 @@ TERM_RE = re.compile(f"[0-9a-z]{{3,}}|[{_CJK}]{{2,}}")
 
 
 def enabled(env=None) -> bool:
-    """`enable_hook_context` の判定。未設定は既定の有効（04 §10 (a) の代替設計）。"""
+    """hook 注入の有効判定。未設定は既定の有効（04 §10 (a) の代替設計）。"""
     env = os.environ if env is None else env
     value = env.get(ENV_ENABLE)
     if value is None:

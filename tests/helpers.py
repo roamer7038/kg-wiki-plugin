@@ -25,7 +25,7 @@ def clean_env(project_dir=None, home=None):
     """
     env = dict(os.environ)
     for key in list(env):
-        if key.startswith("CLAUDE_PLUGIN_OPTION_") or key == "KG_WIKI_ROOT":
+        if key.startswith("KG_WIKI_"):
             del env[key]
     if home is not None:
         env["HOME"] = str(home)
