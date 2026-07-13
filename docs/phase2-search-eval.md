@@ -24,7 +24,28 @@ python3 tests/perf/compare_recall.py --root /tmp/eval-wiki/global
 
 ## 計測記録
 
-### 2026-07-13（search ベースライン。qmd 未導入のため vsearch/hybrid は無効）
+### 2026-07-13（qmd 2.5.3 導入・実機確認後の本計測）
+
+| 種別 | search | vsearch | hybrid |
+|---|---|---|---|
+| lexical（10 問） | 1.00 | 1.00 | 1.00 |
+| semantic（10 問） | 0.85 | **0.95** | **0.90** |
+| 全体 | 0.93 | 0.97 | 0.95 |
+
+- 環境: kg-wiki 0.2.0 / qmd 2.5.3（CPU 実行）/ recall@10
+- **曖昧・意味系での vsearch / hybrid の優位を確認**（Phase 2 完了条件を充足）。
+  - #15「クエリを言い換えながら繰り返し探す」・#20「どんなときにグラフ検索が
+    有効か」で search の取りこぼしを vsearch / hybrid が回収（0.50 → 1.00）。
+  - #12「知識の全体像を俯瞰して要約したい」は 3 方式とも 0.50
+    （community-detection が届かない。俯瞰系は本来 `kg community` の担当であり、
+    ルーティング表の設計と整合する結果）。
+  - #13 は hybrid のみ 0.50 とわずかに劣化（リランカーの揺れ）。
+- lexical は 3 方式とも 1.00 — 既知キーワードには `kg search` で十分であり、
+  「まず search」を既定とするルーティング指針（02 §6.4）を裏づける。
+- 所要時間の目安: search は 0.1 秒/問、vsearch / hybrid は CPU 環境で
+  10〜45 秒/問（クエリ拡張・リランカーの LLM 推論を含む）。
+
+### 2026-07-13（参考: qmd 未導入時の search ベースライン）
 
 | 種別 | search | vsearch | hybrid |
 |---|---|---|---|
@@ -32,9 +53,5 @@ python3 tests/perf/compare_recall.py --root /tmp/eval-wiki/global
 | semantic（10 問） | 0.85 | 無効 | 無効 |
 | 全体 | 0.93 | 無効 | 無効 |
 
-- 環境: kg-wiki 0.2.0 / recall@10
-- semantic の取りこぼし: #12（community-detection が上位 10 に入らず 0.50）、
-  #16（old-search 0.50）、#20（graphrag-bench 0.50）— いずれも語彙一致に乏しい
-  俯瞰・意図系クエリで、vsearch/hybrid の優位が見込まれる箇所。
-- **vsearch / hybrid の計測は qmd 実機確認（04 §8.4）後に追記する。**
-  「曖昧系での優位を確認」という完了条件はこの追記をもって充足となる。
+（vsearch / hybrid 無効時は exit 4 の縮退動作。search の値は本計測と一致 =
+決定論の傍証）
