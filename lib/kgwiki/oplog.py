@@ -35,17 +35,27 @@ def append(root: Path, line: str) -> None:
     fsio.atomic_write_text(path, text + line + "\n")
 
 
-def run_log_ingest(layer_list, ref: str, source: str, date) -> object:
-    """kg log ingest。記録先の層（Layer）を返す。
+def run_log_ingest(layer_list, refs, source: str, date) -> object:
+    """kg log ingest。1 ref = 1 行で追記し、記録先の層（Layer）を返す。
 
     layer_list はグローバル → プロジェクトの順（両層に存在する場合は
     プロジェクト層に記録する）。
+
+    一括取り込みのため refs は複数可。**全 ref を先に解決してから書く**
+    （途中の不在で部分適用しない）。
     """
-    target_layer = None
-    for layer in layer_list:  # 後勝ち = プロジェクト層優先
-        if ref in scan_page_refs(layer.root):
-            target_layer = layer
-    if target_layer is None:
-        raise KgError(f"ページが両層に不在: {ref}")
-    append(target_layer.root, format_line(date, "ingest", ref, source))
-    return target_layer
+    if isinstance(refs, str):
+        refs = [refs]
+    known = [(layer, scan_page_refs(layer.root)) for layer in layer_list]
+    resolved = []
+    for ref in refs:
+        target_layer = None
+        for layer, page_refs in known:  # 後勝ち = プロジェクト層優先
+            if ref in page_refs:
+                target_layer = layer
+        if target_layer is None:
+            raise KgError(f"ページが両層に不在: {ref}")
+        resolved.append((target_layer, ref))
+    for target_layer, ref in resolved:
+        append(target_layer.root, format_line(date, "ingest", ref, source))
+    return resolved[0][0]

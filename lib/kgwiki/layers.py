@@ -55,6 +55,19 @@ def find_project_root() -> Path:
     return None
 
 
+def project_root_for_init() -> Path:
+    """init 用のプロジェクト層 root。既存でなくてよい（init が作る）。
+
+    既存があればそれを使い、無ければ CLAUDE_PROJECT_DIR（無ければ cwd）直下に
+    置く。存在を要求する find_project_root とは別経路（init の鶏卵回避）。
+    """
+    existing = find_project_root()
+    if existing is not None:
+        return existing
+    base = os.environ.get("CLAUDE_PROJECT_DIR") or Path.cwd()
+    return Path(base) / PROJECT_DIR_NAME
+
+
 def select_layers(layer_opt, cli_root=None, for_write=False, quiet=False):
     """--layer の解決。読み取り系の既定は all、書き込み系はコマンドごとに指定する。
 

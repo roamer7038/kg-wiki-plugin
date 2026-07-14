@@ -130,7 +130,7 @@ def build_parser():
 
     sp = sub.add_parser("log", help="log.md への追記（ingest 記録）")
     sp.add_argument("op")
-    sp.add_argument("ref")
+    sp.add_argument("ref", nargs="+", metavar="REF")
     sp.add_argument("--source", required=True, metavar="URL|PATH")
     _add_common(sp, write=True, with_limit=False,
                 layer_choices=("global", "project"))
@@ -168,6 +168,23 @@ def _write_layer(args):
     return selected[0]
 
 
+def _init_layer(args):
+    """kg init 専用の層解決。対象 root はまだ存在しなくてよい。"""
+    import sys as _sys
+
+    from . import layers
+    layer_opt = args.layer or (
+        "project" if layers.find_project_root() is not None else "global")
+    if layer_opt == "project":
+        layer = layers.Layer(layers.PROJECT, layers.project_root_for_init())
+    else:
+        layer = layers.Layer(layers.GLOBAL, layers.resolve_global_root(args.root))
+    if not args.quiet:
+        kind = "プロジェクト層" if layer.kind == layers.PROJECT else "グローバル層"
+        print(f"kg: {kind} {layer.root} を対象とする", file=_sys.stderr)
+    return layer
+
+
 def _check_ref_arg(text):
     from . import refs
     if not refs.is_canonical(text):
@@ -194,8 +211,9 @@ def cmd_init(args):
     for name in args.topic:
         if not refs.is_slug(name):
             raise UsageError(f"--topic は [a-z0-9-]+ であること: {name}")
-    layer = _write_layer(args)
+    layer = _init_layer(args)
     date = _parse_date(args.date)
+    layer.root.mkdir(parents=True, exist_ok=True)
     with fsio.RootLock(layer.root, "init"):
         scaffold.run_init(layer, args.topic, date, quiet=args.quiet)
         if args.with_qmd:
@@ -268,7 +286,7 @@ def cmd_traverse(args):
     rel_filter = set(args.rel.split(",")) if args.rel else None
     rows, merged_index = traverse.run_traverse(
         args.ref, _read_layers(args), _topics(args), args.hops, rel_filter,
-        args.direction, args.limit)
+        args.direction, args.limit, quiet=args.quiet)
     for row in rows:
         print(output.jsonl(traverse.row_record(row, merged_index)) if args.json
               else traverse.format_row(row, merged_index))
@@ -552,7 +570,8 @@ def cmd_log(args):
         raise UsageError(
             f"kg log の op は {oplog.LOG_CMD_OP} のみ"
             f"（{others} は各コマンドが自身で記録する）")
-    _check_ref_arg(args.ref)
+    for ref in args.ref:
+        _check_ref_arg(ref)
     date = _parse_date(args.date)
     if args.layer in ("global", "project"):
         layer_list = layers.select_layers(args.layer, cli_root=args.root,

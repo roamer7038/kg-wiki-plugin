@@ -21,9 +21,13 @@ class TestHooksJson(unittest.TestCase):
                 for hook in entry["hooks"]:
                     yield hook["command"]
 
-    def test_plugin_json_points_at_hooks_file(self):
-        """hooks/hooks.json は自動検出されない。明示参照が必須。"""
-        self.assertEqual(self.plugin.get("hooks"), "./hooks/hooks.json")
+    def test_plugin_json_does_not_duplicate_hooks_reference(self):
+        """標準パス hooks/hooks.json は自動読込される（Claude Code 2.1.209）。
+
+        plugin.json に "hooks" を明示すると自動読込分と重複し
+        Duplicate hooks file detected で失敗する（04 §10 の訂正）。
+        """
+        self.assertIsNone(self.plugin.get("hooks"))
 
     def test_registers_both_events(self):
         self.assertEqual(set(self.data["hooks"]),

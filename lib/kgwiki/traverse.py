@@ -1,5 +1,7 @@
 """kg traverse: adjacency 上の決定論 BFS。"""
 
+import sys
+
 from . import graph as graph_mod
 from . import layers as layers_mod
 from .errors import KgError
@@ -52,11 +54,19 @@ def bfs(out, inn, start: str, max_hops: int, direction: str, rel_filter):
 
 
 def run_traverse(ref: str, layer_list, topics, hops: int, rel_filter,
-                 direction: str, limit: int):
+                 direction: str, limit: int, quiet: bool = False):
     out, inn, _nodes, merged_index, _shadow = load_merged_graph(layer_list, topics)
     if ref not in merged_index:
         raise KgError(f"起点ページが両層に不在: {ref}（kg build 済みか確認する）")
-    results = bfs(out, inn, ref, hops, direction, rel_filter)[:limit]
+    all_results = bfs(out, inn, ref, hops, direction, rel_filter)
+    results = all_results[:limit]
+    if len(all_results) > limit and not quiet:
+        # 結果は hop 昇順に並ぶため、打ち切りは深い hop から丸ごと落ちる。
+        # 黙って落とすと「多 hop 走査が効かない」と誤読されるので必ず告知する。
+        dropped_hops = sorted({r[1] for r in all_results[limit:]})
+        print(f"kg traverse: {len(all_results)} 件中 {limit} 件で打ち切り"
+              f"（--limit {limit}）。未表示に hop {dropped_hops} を含む",
+              file=sys.stderr)
     return results, merged_index
 
 

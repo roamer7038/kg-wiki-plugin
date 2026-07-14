@@ -16,6 +16,9 @@ FENCE_RE = re.compile(r"^ {0,3}(```|~~~)")
 INLINE_CODE_RE = re.compile(r"(?<!`)(`+)(?!`)(.+?)(?<!`)\1(?!`)")
 H1_RE = re.compile(r"^#( |$)")
 LIST_RE = re.compile(r"^(?:[-*+] |\d+[.)] )")
+# 水平線（CommonMark thematic break）: 同一記号 3 個以上、間の空白は許容
+THEMATIC_BREAK_RE = re.compile(
+    r"^(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$")
 SUMMARY_LIMIT = 120  # コードポイント
 
 
@@ -125,6 +128,8 @@ def extract_summary(body: str) -> str:
                 in_comment = True
             continue
         if stripped.startswith(("#", ">", "|")) or LIST_RE.match(stripped):
+            continue
+        if THEMATIC_BREAK_RE.match(stripped):
             continue
         return stripped[:SUMMARY_LIMIT]
     return ""
