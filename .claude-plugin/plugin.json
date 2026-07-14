@@ -5,6 +5,5 @@
   "author": {
     "name": "roamer7038"
   },
-  "license": "MIT",
-  "hooks": "./hooks/hooks.json"
+  "license": "MIT"
 }
