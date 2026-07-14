@@ -33,6 +33,14 @@ VERIFIED_VERSION_RANGE = "2.5"
 COLLECTION_MASK = "topics/*/pages/**/*.md"
 VERSION_RE = re.compile(r"(\d+\.\d+\.\d+)")
 
+# サブプロセスのタイムアウト（秒）。qmd は CPU 環境で埋め込み生成・リランクに
+# 時間がかかる（README: 1 クエリ 10〜45 秒）。正常なクエリを殺さないよう
+# 各操作の最悪ケースに十分な余裕を持たせた値にする。ハング時の無期限ブロックを
+# 防ぐのが目的で、超過は qmd 異常として KgError に変換する（_run 参照）。
+SEARCH_TIMEOUT = 120     # vsearch / hybrid の 1 クエリ実行（45 秒の最悪ケースに余裕）
+SYNC_TIMEOUT = 300       # build 時の update / embed（全ページ分の埋め込み生成を含む）
+COLLECTION_TIMEOUT = 30  # collection show/add/remove（メタデータ操作のみで高速）
+
 
 def qmd_path():
     return shutil.which("qmd")
@@ -89,17 +97,22 @@ def version():
     return match.group(1) if match else None
 
 
-def _run(args_list, timeout=None):
-    proc = subprocess.run([qmd_path()] + args_list, capture_output=True, text=True,
-                          timeout=timeout)
+def _run(args_list, timeout):
+    try:
+        proc = subprocess.run([qmd_path()] + args_list, capture_output=True,
+                              text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # ハング時は qmd 異常として既存のエラー経路（KgError）に合流させる
+        raise KgError(f"qmd の実行がタイムアウト（{timeout} 秒）: "
+                      f"{' '.join(args_list[:2])}") from None
     if proc.returncode != 0:
         raise KgError(f"qmd の実行失敗（exit {proc.returncode}）: "
                       f"{proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else ''}")
     return proc.stdout
 
 
-def _run_json(args_list):
-    stdout = _run(args_list)
+def _run_json(args_list, timeout):
+    stdout = _run(args_list, timeout)
     try:
         return json.loads(stdout)
     except ValueError:
@@ -166,7 +179,8 @@ def search(mode: str, query: str, layer_list, topics, limit: int):
     order = []
     for layer in layer_list:
         items = _run_json([subcmd, query, "--json", "--full-path",
-                           "-n", str(limit), "-c", collection_name(layer)])
+                           "-n", str(limit), "-c", collection_name(layer)],
+                          timeout=SEARCH_TIMEOUT)
         if not isinstance(items, list):
             raise KgError("qmd の JSON 出力が配列でない")
         mapped, unmapped = map_results(items, [(layer.kind, layer.root)])
@@ -196,15 +210,16 @@ def register_collection(layer) -> str:
     name = collection_name(layer)
     root = str(Path(layer.root).resolve())
     try:
-        show = _run(["collection", "show", name])
+        show = _run(["collection", "show", name], timeout=COLLECTION_TIMEOUT)
     except KgError:
         show = ""  # 不在（qmd は exit 1 を返す）
     match = re.search(r"^\s*Path:\s*(.+)$", show, re.MULTILINE)
     if match:
         if str(Path(match.group(1).strip()).resolve()) == root:
             return name
-        _run(["collection", "remove", name])  # 別パスの既存を付け替える
-    _run(["collection", "add", root, "--name", name, "--mask", COLLECTION_MASK])
+        _run(["collection", "remove", name], timeout=COLLECTION_TIMEOUT)  # 別パスの既存を付け替える
+    _run(["collection", "add", root, "--name", name, "--mask", COLLECTION_MASK],
+         timeout=COLLECTION_TIMEOUT)
     return name
 
 
@@ -213,5 +228,5 @@ def sync(root) -> None:
 
     失敗は例外（呼び出し側で警告化し exit 0 を維持する）。差分なしなら合計 0.2 秒程度。
     """
-    _run(["update"])
-    _run(["embed"])
+    _run(["update"], timeout=SYNC_TIMEOUT)
+    _run(["embed"], timeout=SYNC_TIMEOUT)

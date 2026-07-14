@@ -188,6 +188,13 @@ class TestDumpScalar(unittest.TestCase):
         self.assertEqual(yamlsub.dump_scalar('say "hi": x'), '"say \\"hi\\": x"')
         self.assertEqual(yamlsub.dump_scalar(True), "true")
 
+    def test_reject_newline_and_control(self):
+        # 本サブセットの二重引用符は単一行前提で \\n を往復できない（\\" と \\\\ のみ）。
+        # 改行・制御文字を含む値は直列化時に明確なエラーで拒否し、破損 frontmatter を防ぐ。
+        for bad in ("x\n---\ntitle: injected", "line\rone", "tab\tval", "nul\x00here"):
+            with self.assertRaises(ValueError):
+                yamlsub.dump_scalar(bad)
+
 
 if __name__ == "__main__":
     unittest.main()

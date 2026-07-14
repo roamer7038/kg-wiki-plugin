@@ -108,6 +108,25 @@ class TestGenerate(SkillgenBase):
         self.assertEqual(self.kg(["skillgen", "llm"]).returncode, 3)
         self.assertEqual(self.kg(["skillgen", "topic:"]).returncode, 3)
 
+    def test_name_traversal_rejected(self):
+        # --name のパストラバーサルを拒否し、wiki ルート外に書かせない
+        result = self.kg(["skillgen", "topic:llm", "--layer", "global",
+                          "--name", "../../../../ESCAPED"])
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+        escaped = Path(self.tmp.name) / "ESCAPED" / "SKILL.md"
+        self.assertFalse(escaped.exists())
+
+    def test_name_with_newline_rejected(self):
+        result = self.kg(["skillgen", "topic:llm", "--layer", "global",
+                          "--name", "bad\n"])
+        self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+
+    def test_default_name_passes_validation(self):
+        # 既定名 kg-<topic> が新しい検証を通ること（正常系が壊れない）
+        result = self.kg(["skillgen", "topic:llm", "--layer", "global"])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.staging("kg-llm").is_file())
+
     def test_missing_topic_exit_1(self):
         self.assertEqual(
             self.kg(["skillgen", "topic:nosuch", "--layer", "global"]).returncode, 1)

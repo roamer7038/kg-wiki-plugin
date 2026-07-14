@@ -136,6 +136,23 @@ def _is_str(v) -> bool:
     return isinstance(v, str)
 
 
+def _coerce_scalar_str(v):
+    """yamlsub の型推論で int/bool/date になった値を元の文字列表現に戻す。
+
+    title/slug/type/keywords は「文字列であること」で検証されるため、
+    `slug: 2024` や `title: true` のような正当値が型推論で非文字列になると
+    build を止めてしまう。ここで文字列へ正規化して悪影響を防ぐ。
+    dict/list などスカラー以外はそのまま返す（呼び出し側で型検証する）。
+    """
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, int):
+        return str(v)
+    if isinstance(v, date):
+        return v.isoformat()
+    return v
+
+
 def _err(issues, code, target, message, halts=True):
     issues.append(Issue("error", code, target, message, halts=halts))
 
@@ -166,6 +183,14 @@ def load_page(path: Path, layer_kind: str, topic: str, type_dir: str, config):
     data, yaml_issues = yamlsub.parse_mapping_lines(fm_lines, first_lineno=2)
     for yi in yaml_issues:
         _err(issues, "fm-parse", ref, f"L{yi.line}: {yi.message}")
+
+    # 文字列であるべきキーは型推論の巻き添えを外し、生の文字列表現へ正規化する。
+    # （updated / sources.accessed の日付など他キーには触れない）
+    for key in ("title", "type", "slug"):
+        if key in data:
+            data[key] = _coerce_scalar_str(data[key])
+    if isinstance(data.get("keywords"), list):
+        data["keywords"] = [_coerce_scalar_str(k) for k in data["keywords"]]
 
     page = Page(ref=ref, path=path, layer=layer_kind, body=body,
                 hash=hashing.page_hash_bytes(raw))

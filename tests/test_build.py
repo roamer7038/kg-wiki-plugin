@@ -58,6 +58,49 @@ class TestBuild(unittest.TestCase):
         self.assertEqual(g_full.returncode, 0)
         self.assertEqual(incremental, self.derived_state())  # 出力バイト一致
 
+    def test_incremental_equals_full_on_add(self):
+        # ページ追加: 既存ページと [[ref]] で結ぶ新規ページを増分 build → --full 一致
+        build_both(self.fix)
+        new_page = self.fix / "global/topics/llm/pages/concepts/added.md"
+        new_page.write_text(
+            "---\ntitle: 追加ページ\ntype: concepts\nslug: added\n"
+            "summary: 増分追加の検証用\nupdated: 2026-07-14\n---\n\n"
+            "[[llm/concepts/rag]] を参照する追加ページ。\n", encoding="utf-8")
+        g_inc, _ = build_both(self.fix)
+        self.assertEqual(g_inc.returncode, 0, g_inc.stdout)
+        incremental = self.derived_state()
+        g_full, _ = build_both(self.fix, extra=["--full"])
+        self.assertEqual(g_full.returncode, 0)
+        self.assertEqual(incremental, self.derived_state())  # 出力バイト一致
+
+    def test_incremental_equals_full_on_delete(self):
+        # ページ削除: 他ページから参照される rag を削除 → 増分 build → --full 一致
+        # （逆エッジ・adjacency・community に残骸が無いこと）
+        build_both(self.fix)
+        (self.fix / "global/topics/llm/pages/concepts/rag.md").unlink()
+        g_inc, _ = build_both(self.fix)
+        self.assertEqual(g_inc.returncode, 0, g_inc.stdout)
+        incremental = self.derived_state()
+        g_full, _ = build_both(self.fix, extra=["--full"])
+        self.assertEqual(g_full.returncode, 0)
+        self.assertEqual(incremental, self.derived_state())  # 出力バイト一致
+
+    def test_incremental_equals_full_on_edge_change(self):
+        # エッジ変更: graphrag の uses 関係の to を別の既存 ref に繋ぎ変える
+        # → 増分 build → --full 一致
+        build_both(self.fix)
+        page = self.fix / "global/topics/llm/pages/concepts/graphrag.md"
+        page.write_text(page.read_text(encoding="utf-8")
+                        .replace("to: llm/concepts/knowledge-graph",
+                                 "to: llm/concepts/vector-search"),
+                        encoding="utf-8")
+        g_inc, _ = build_both(self.fix)
+        self.assertEqual(g_inc.returncode, 0, g_inc.stdout)
+        incremental = self.derived_state()
+        g_full, _ = build_both(self.fix, extra=["--full"])
+        self.assertEqual(g_full.returncode, 0)
+        self.assertEqual(incremental, self.derived_state())  # 出力バイト一致
+
     def test_summary_counts(self):
         g, _ = build_both(self.fix)
         lines = sorted(g.stdout.splitlines())

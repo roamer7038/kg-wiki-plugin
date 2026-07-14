@@ -8,8 +8,9 @@ from dataclasses import dataclass
 
 from .errors import RefFormatError
 
-SLUG_RE = re.compile(r"^[a-z0-9-]+$")
-REF_RE = re.compile(r"^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)$")
+# $ は末尾改行の直前にもマッチするため、\Z（文字列末尾）で終端を固定する
+SLUG_RE = re.compile(r"^[a-z0-9-]+\Z")
+REF_RE = re.compile(r"^([a-z0-9-]+)/([a-z0-9-]+)/([a-z0-9-]+)\Z")
 
 
 @dataclass(frozen=True)

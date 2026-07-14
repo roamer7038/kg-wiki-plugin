@@ -465,9 +465,12 @@ def cmd_hook_context(args):
 
 
 def cmd_skillgen(args):
-    from . import fsio, layers, oplog, skillgen, validate
+    from . import fsio, layers, oplog, refs, skillgen, validate
     if args.dry_run and not args.install:
         raise UsageError("--dry-run は --install と併用すること")
+    # --name はパス結合に使うため slug と同じ厳格さで検証する（トラバーサル防止）
+    if args.name is not None and not refs.is_slug(args.name):
+        raise UsageError(f"--name は [a-z0-9-]+ であること: {args.name!r}")
     kind, value = skillgen.parse_source(args.source)
     layer = _write_layer(args)
     date = _parse_date(args.date)
