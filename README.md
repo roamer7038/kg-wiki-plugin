@@ -176,7 +176,7 @@ updated: 2026-07-02
 | `kg skillgen topic:<topic>` | topic やコミュニティから Skill を生成 |
 | `kg hook-context` | UserPromptSubmit hook 用の軽量注入（hook から呼ばれる） |
 
-共通オプション: `--layer`（`global` / `project` / `all`）、`--root`、`--json`、`--limit`。
+共通オプション: `--layer`（`global` / `project` / `all`）と `--root` は全コマンド共通。`--json` は `pack` / `skillgen` を除く各コマンドに、`--limit` は検索・走査系（`search` / `traverse` / `vsearch` / `hybrid` / `community`）にのみある。
 
 `kg move` と `kg skillgen --install` は `--dry-run` で差分を確認できる。
 

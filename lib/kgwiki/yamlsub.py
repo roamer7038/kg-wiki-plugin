@@ -20,6 +20,8 @@ PLAIN_FIRST_FORBIDDEN = set('"\'[#&*!|>%@ ')
 KEY_RE = re.compile(r"^([A-Za-z0-9_-]+):(.*)$")
 INT_RE = re.compile(r"^-?[0-9]+$")
 DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# 本サブセットが単一行スカラーしか表現できず往復不能な文字（C0 制御 + DEL）。
+CONTROL_RE = re.compile(r"[\x00-\x1f\x7f]")
 
 
 @dataclass
@@ -362,6 +364,11 @@ def dump_scalar(value) -> str:
     if isinstance(value, datetime.date):
         return value.isoformat()
     text = str(value)
+    # 本サブセットの二重引用符は \" と \\ しかエスケープできず単一行前提のため、
+    # 改行・制御文字は引用しても往復できない。書き出さずその場で拒否する
+    # （kg new 等が破損 frontmatter を生成する前に失敗させる）。
+    if CONTROL_RE.search(text):
+        raise ValueError("frontmatter 値に改行・制御文字は使用できません")
     if needs_quote(text):
         return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
     return text

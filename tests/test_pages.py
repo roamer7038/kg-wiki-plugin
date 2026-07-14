@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 from helpers import LIB  # noqa: F401
@@ -128,6 +129,24 @@ class TestSchema(unittest.TestCase):
         _page, issues = load(VALID.replace("updated: 2026-07-01",
                                            'updated: "2026-07-01"'))
         self.assertIn("fm-schema", self.codes(issues))
+
+    def test_numeric_boolean_like_scalars_are_strings(self):
+        # slug/title/keywords が数値・真偽・日付に「見える」正当値でも
+        # 文字列として扱われ build を止めない（型推論の悪影響を防ぐ）。
+        text = ("---\n"
+                "title: true\n"
+                "type: concepts\n"
+                "slug: 2024\n"
+                "keywords: [2024, alpha]\n"
+                "updated: 2026-07-01\n"
+                "---\n\n本文。\n")
+        page, issues = load(text, filename="2024.md")
+        self.assertEqual(issues, [])  # halts する fm-schema エラーが無いこと
+        self.assertEqual(page.title, "true")
+        self.assertEqual(page.slug, "2024")  # ファイル名 2024.md と一致
+        self.assertEqual(page.keywords, ["2024", "alpha"])
+        # updated は日付として保持されること（正規化の巻き添えを受けない）
+        self.assertEqual(page.updated, date(2026, 7, 1))
 
     def test_fatal_frontmatter(self):
         page, issues = load("no frontmatter\n")

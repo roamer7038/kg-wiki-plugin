@@ -24,6 +24,13 @@ class TestRefs(unittest.TestCase):
             with self.assertRaises(RefFormatError):
                 refs.parse_ref(bad)
 
+    def test_trailing_newline_rejected(self):
+        # Python の $ は末尾改行の直前にもマッチするため、\Z で拒否する
+        self.assertFalse(refs.is_slug("ab\n"), "ab\\n")
+        self.assertFalse(refs.is_canonical("a/b/c\n"), "a/b/c\\n")
+        with self.assertRaises(RefFormatError):
+            refs.parse_ref("a/b/c\n")
+
 
 class TestHashing(unittest.TestCase):
     def test_page_hash_is_raw_sha256(self):
