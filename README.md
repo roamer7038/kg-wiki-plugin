@@ -56,6 +56,15 @@ Claude 側は、この派生物を通して知識にアクセスする。UserPro
 
 ## インストール
 
+マーケットプレイス経由で導入する。
+
+```
+/plugin marketplace add roamer7038/kg-wiki-plugin
+/plugin install kg-wiki@kg-wiki
+```
+
+ローカルのクローンから直接読み込む場合は次のようにする。
+
 ```bash
 claude --plugin-dir /path/to/kg-wiki-plugin
 ```

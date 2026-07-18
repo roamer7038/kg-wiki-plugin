@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "kg-wiki",
+  "description": "Markdown 知識リポジトリ + 派生 KG による Claude Code 知識管理",
+  "owner": {
+    "name": "roamer7038",
+    "email": "okayado7038@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "kg-wiki",
+      "displayName": "kg-wiki",
+      "description": "Markdown で書かれた知識ページを真のソースとし、そこから検索可能な構造（index・ナレッジグラフ・コミュニティ要約）を決定論的に生成する Claude Code プラグイン。",
+      "author": {
+        "name": "roamer7038",
+        "email": "okayado7038@gmail.com",
+        "url": "https://github.com/roamer7038"
+      },
+      "source": "./",
+      "category": "knowledge",
+      "homepage": "https://github.com/roamer7038/kg-wiki-plugin",
+      "keywords": ["knowledge-base", "knowledge-graph", "wiki", "rag", "memory"]
+    }
+  ]
+}
