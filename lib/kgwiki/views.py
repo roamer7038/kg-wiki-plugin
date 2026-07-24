@@ -88,6 +88,99 @@ def banner(kind, message):
     return '<div class="banner %s">%s</div>' % (esc(kind), esc(message))
 
 
+def home(topics, recent):
+    rows = []
+    for stat in topics:
+        types = "、".join("%s %d" % (esc(t), n)
+                          for t, n in sorted(stat["types"].items()))
+        warn = ""
+        if stat["stale"]:
+            warn = ' <span class="meta">（未 build / 変更あり %d 件）</span>' % stat["stale"]
+        rows.append('<li><a href="/t/%s">%s</a> — %d ページ'
+                    '<div class="meta">%s</div>%s</li>'
+                    % (esc(stat["topic"]), esc(stat["topic"]),
+                       stat["count"], types, warn))
+    recent_html = "".join(
+        '<li><a href="/p/%s">%s</a> <span class="meta">%s</span></li>'
+        % (esc(r["ref"]), esc(r.get("title") or r["ref"]),
+           esc(r.get("updated", "")))
+        for r in recent)
+    body = ("<h2>トピック</h2><ul>%s</ul>"
+            "<h2>最近更新されたページ</h2><ul>%s</ul>"
+            % ("".join(rows), recent_html))
+    return layout("ホーム", body)
+
+
+def topic(name, groups, type_filter=""):
+    parts = []
+    for type_dir in sorted(groups):
+        parts.append("<h3>%s</h3><ul>" % esc(type_dir))
+        for rec in groups[type_dir]:
+            parts.append(
+                '<li><a href="/p/%s">%s</a> %s'
+                '<div class="meta">%s — %s</div></li>'
+                % (esc(rec["ref"]), esc(rec.get("title") or rec["ref"]),
+                   layer_badge(rec.get("layer", "")),
+                   esc(rec.get("summary", "")), esc(rec.get("updated", ""))))
+        parts.append("</ul>")
+    head = "<h2>%s</h2>" % esc(name)
+    if type_filter:
+        head += '<p class="meta">型 %s で絞り込み中 — <a href="/t/%s">全て表示</a></p>' % (
+            esc(type_filter), esc(name))
+    return layout(name, head + "".join(parts))
+
+
+def page(data):
+    """data のキーは serve._page_view() が組み立てる（Task 5）。"""
+    parts = [banner(kind, message) for kind, message in data["banners"]]
+    parts.append("<h2>%s %s</h2>" % (esc(data["title"]), layer_badge(data["layer"])))
+    parts.append('<p class="meta">%s / %s</p>'
+                 % (esc(data["type"]), esc(data["updated"])))
+    if data["summary"]:
+        parts.append("<p>%s</p>" % esc(data["summary"]))
+    parts.append('<article>%s</article>' % data["body_html"])
+    parts.append(_rel_section("関係", data["relations"]))
+    parts.append(_rel_section("被リンク", data["backlinks"]))
+    if data["keywords"]:
+        parts.append('<p class="meta">キーワード: %s</p>'
+                     % esc("、".join(data["keywords"])))
+    if data["sources"]:
+        items = "".join(
+            '<li><a href="%s" rel="noreferrer">%s</a></li>' % (esc(u), esc(t or u))
+            for t, u in data["sources"])
+        parts.append("<h3>出典</h3><ul>%s</ul>" % items)
+    return layout(data["title"], "".join(parts))
+
+
+def _rel_section(heading, groups):
+    if not groups:
+        return ""
+    parts = ["<h3>%s</h3>" % esc(heading)]
+    for rel in sorted(groups):
+        items = "".join(
+            '<li><a%s href="%s">%s</a> <span class="meta">%s</span></li>'
+            % ("" if ok else ' class="broken"', esc(href), esc(label), esc(summary))
+            for href, label, summary, ok in groups[rel])
+        parts.append("<h4>%s</h4><ul class=\"rel\">%s</ul>" % (esc(rel), items))
+    return "".join(parts)
+
+
+def search_results(q, hits, total):
+    if not hits:
+        body = ("<h2>検索: %s</h2><p>該当なし。</p>"
+                "<p class=\"meta\">派生物が未生成の場合は "
+                "<code>kg build</code> を実行してください。</p>" % esc(q))
+        return layout("検索", body, query=q)
+    rows = "".join(hit_row(*h) for h in hits)
+    return layout("検索", "<h2>検索: %s（%d 件）</h2>%s" % (esc(q), total, rows),
+                  query=q)
+
+
+def error_page(title, message, extra=""):
+    return layout(title, "<h2>%s</h2><p>%s</p>%s"
+                  % (esc(title), esc(message), extra))
+
+
 def hit_row(score_text, ref, title, summary, layer):
     """検索結果の 1 行。
 

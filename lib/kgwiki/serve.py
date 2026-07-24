@@ -4,13 +4,21 @@ HTTP に触れるのは §6 のアダプタのみ。検索・グラフ・層マ�
 既存モジュールに委譲し、本モジュールでは再実装しない（05 §5.1）。
 """
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
+from urllib.parse import quote
 
 from . import graph as graph_mod
 from . import hashing
 from . import layers as layers_mod
 from . import manifest as manifest_mod
+from . import mdrender
+from . import output as output_mod
+from . import pages as pages_mod
+from . import refs as refs_mod
+from . import search as search_mod
 from . import traverse as traverse_mod
+from . import views
 
 
 @dataclass
@@ -86,3 +94,214 @@ def topic_stats(ctx):
         if page_state(layer, ref, path) != "ok":
             entry["stale"] += 1
     return [stats[name] for name in sorted(stats)]
+
+
+@dataclass
+class Response:
+    status: int
+    content_type: str
+    body: bytes
+    headers: dict = field(default_factory=dict)
+
+
+SLUG = r"[a-z0-9-]+"
+MAX_LIMIT = 100
+DEFAULT_LIMIT = 20
+RECENT_LIMIT = 20
+
+
+def _by_updated_desc_ref_asc(records):
+    """`updated` 降順 → `ref` 昇順の 2 段階ソート（05 §3.2 / §3.3）。
+
+    reverse=True を tuple キーへ一括適用すると ref まで降順になってしまうため、
+    安定ソートを利用して ref 昇順 → updated 降順の順に 2 回に分けて適用する。
+    """
+    rows = sorted(records, key=lambda r: r["ref"])
+    rows.sort(key=lambda r: r.get("updated", ""), reverse=True)
+    return rows
+
+
+def _html(body, status=200):
+    return Response(status, "text/html; charset=utf-8", body.encode("utf-8"))
+
+
+def _one(query, key, default=""):
+    values = query.get(key) or []
+    return values[0] if values else default
+
+
+def route(method, path, query, ctx):
+    if method != "GET":
+        return _html(views.error_page(
+            "405 Method Not Allowed",
+            "このビューワは読み取り専用で、GET のみを受け付ける。"), 405)
+    for pattern, handler in ROUTES:
+        m = pattern.match(path)
+        if m:
+            return handler(ctx, query, *m.groups())
+    if path.startswith("/p/") or path.startswith("/t/"):
+        return _html(views.error_page(
+            "400 Bad Request",
+            "ref は正準形 <topic>/<type>/<slug>（文字集合 [a-z0-9-]）でなければならない。"),
+            400)
+    return _html(views.error_page("404 Not Found", "そのページは存在しない。"), 404)
+
+
+def _style(ctx, query):
+    return Response(200, "text/css; charset=utf-8", views.STYLE.encode("utf-8"))
+
+
+def _home(ctx, query):
+    merged, _shadow = load_merged_index(ctx)
+    recent = _by_updated_desc_ref_asc(list(merged.values()))[:RECENT_LIMIT]
+    return _html(views.home(topic_stats(ctx), recent))
+
+
+def _topic(ctx, query, name):
+    merged, _shadow = load_merged_index(ctx)
+    type_filter = _one(query, "type")
+    groups = {}
+    for ref in sorted(merged):
+        rec = merged[ref]
+        topic, type_dir, _slug = ref.split("/")
+        if topic != name:
+            continue
+        if type_filter and type_dir != type_filter:
+            continue
+        groups.setdefault(type_dir, []).append(rec)
+    if not groups and name not in {s["topic"] for s in topic_stats(ctx)}:
+        return _html(views.error_page(
+            "404 Not Found", "トピック %s は対象層に存在しない。" % name), 404)
+    for type_dir in groups:
+        groups[type_dir] = _by_updated_desc_ref_asc(groups[type_dir])
+    return _html(views.topic(name, groups, type_filter))
+
+
+def _resolver(merged):
+    def resolve(ref):
+        rec = merged.get(ref)
+        if rec is None:
+            slug = ref.split("/")[-1]
+            return ("/search?q=" + quote(slug), ref, False)
+        return ("/p/" + ref, rec.get("title") or ref, True)
+    return resolve
+
+
+def _page(ctx, query, topic, type_dir, slug):
+    ref = "%s/%s/%s" % (topic, type_dir, slug)
+    if not refs_mod.is_canonical(ref):
+        return _html(views.error_page("400 Bad Request", "ref が正準形でない。"), 400)
+    layer, path = find_page(ctx, ref)
+    merged, shadow = load_merged_index(ctx)
+    if layer is None:
+        # 05 §6.2「削除済み」: index には残っているが md が無い
+        deleted = " なお、このページは index には残っている（kg build で解消する）。" \
+            if ref in merged else ""
+        hits = search_mod.run_search(slug, ctx.layer_list, ctx.topics, 5, True)
+        rows = "".join(views.hit_row(output_mod.fmt_score(s), r["ref"],
+                                     r.get("title", ""), r.get("summary", ""),
+                                     r.get("layer", ""))
+                       for s, r in hits)
+        extra = "<h3>近いページ</h3>%s" % (rows or "<p>該当なし。</p>")
+        return _html(views.error_page(
+            "404 Not Found",
+            "ページ %s は未作成。`kg new %s` で作成できる。%s" % (ref, ref, deleted),
+            extra), 404)
+
+    try:
+        page_obj, issues = pages_mod.load_page(
+            path, layer.kind, topic, type_dir, None)
+    except Exception:
+        page_obj, issues = None, []
+    resolve = _resolver(merged)
+    banners = []
+    state = page_state(layer, ref, path)
+    if state == "unbuilt":
+        banners.append(("unbuilt", "このトピックは未 build。"
+                                   "検索と被リンクは利用できない（kg build を実行）。"))
+    elif state in ("stale", "new"):
+        banners.append(("stale", "本文は最新だが、被リンクと検索は前回 build 時点の内容"
+                                 "（kg build を実行すると解消する）。"))
+    if ref in shadow:
+        banners.append(("shadow", "このページはプロジェクト層の内容を表示している"
+                                  "（グローバル層の同名ページを隠している）。"))
+    if page_obj is None:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        banners.append(("error", "frontmatter を解析できない。"
+                                 "kg validate で詳細を確認すること。"))
+        data = _fallback_view(ref, layer.kind, text, banners, resolve)
+        return _html(views.page(data))
+    if issues:
+        banners.append(("error", "frontmatter に問題がある: "
+                        + "、".join(i.code for i in issues)))
+    return _html(views.page(_page_view(ctx, page_obj, layer, banners,
+                                       merged, resolve)))
+
+
+def _link_tuple(ref, merged, resolve):
+    href, label, ok = resolve(ref)
+    rec = merged.get(ref) or {}
+    return (href, label, rec.get("summary", ""), ok)
+
+
+def _page_view(ctx, page_obj, layer, banners, merged, resolve):
+    relations = {}
+    for rel in page_obj.relations:
+        relations.setdefault(rel.rel, []).append(
+            _link_tuple(rel.to, merged, resolve))
+    back = {}
+    for rel, from_ref in backlinks(ctx, page_obj.ref):
+        back.setdefault(rel, []).append(_link_tuple(from_ref, merged, resolve))
+    return {
+        "title": page_obj.title or page_obj.ref,
+        "type": page_obj.type,
+        "updated": str(page_obj.updated or ""),
+        "summary": page_obj.summary or "",
+        "layer": layer.kind,
+        "banners": banners,
+        "body_html": mdrender.render(page_obj.body, resolve),
+        "relations": relations,
+        "backlinks": back,
+        "keywords": page_obj.keywords or [],
+        "sources": [(s.title, s.url) for s in page_obj.sources or []],
+    }
+
+
+def _fallback_view(ref, layer_kind, text, banners, resolve):
+    return {
+        "title": ref, "type": "", "updated": "", "summary": "",
+        "layer": layer_kind, "banners": banners,
+        "body_html": mdrender.render(text, resolve),
+        "relations": {}, "backlinks": {}, "keywords": [], "sources": [],
+    }
+
+
+def _search(ctx, query):
+    q = _one(query, "q").strip()
+    if not q:
+        return Response(302, "text/html; charset=utf-8", b"",
+                        {"Location": "/"})
+    try:
+        limit = min(int(_one(query, "limit", str(DEFAULT_LIMIT))), MAX_LIMIT)
+    except ValueError:
+        limit = DEFAULT_LIMIT
+    topics = ctx.topics
+    topic_param = _one(query, "topic")
+    if topic_param:
+        topics = [t for t in topic_param.split(",") if t]
+    hits = search_mod.run_search(q, ctx.layer_list, topics, limit, False)
+    type_filter = _one(query, "type")
+    if type_filter:
+        hits = [(s, r) for s, r in hits if r.get("type") == type_filter]
+    rows = [(output_mod.fmt_score(s), r["ref"], r.get("title", ""),
+             r.get("summary", ""), r.get("layer", "")) for s, r in hits]
+    return _html(views.search_results(q, rows, len(rows)))
+
+
+ROUTES = [
+    (re.compile(r"^/$"), _home),
+    (re.compile(r"^/style\.css$"), _style),
+    (re.compile(r"^/search$"), _search),
+    (re.compile(r"^/t/(%s)$" % SLUG), _topic),
+    (re.compile(r"^/p/(%s)/(%s)/(%s)$" % (SLUG, SLUG, SLUG)), _page),
+]
