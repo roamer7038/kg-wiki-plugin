@@ -233,6 +233,8 @@ def _resolver(merged):
 
 
 def _page(ctx, query, topic, type_dir, slug):
+    # ROUTES の正規表現により topic/type_dir/slug は [a-z0-9-]+ のみ。
+    # パス要素に "." や "/" が入り得ないため、page_path はルート配下に閉じる。
     ref = "%s/%s/%s" % (topic, type_dir, slug)
     if not refs_mod.is_canonical(ref):
         return _html(views.error_page("400 Bad Request", "ref が正準形でない。"), 400)
