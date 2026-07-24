@@ -132,7 +132,7 @@ def _take_list(lines, i, resolve):
     # 一致せず idx が進まなくなる（無限ループ）。正規化により「items の
     # どの要素も先頭要素の深さ以上」という不変条件が常に成立し、
     # _render_runs 側の前進が構造的に保証される。
-    if items and items[0][0]:
+    if items and items[0][0] != 0:
         base = items[0][0]
         items = [(max(0, d - base), mk, t) for d, mk, t in items]
     # トップレベルの連は別ブロックとして "\n" で区切る

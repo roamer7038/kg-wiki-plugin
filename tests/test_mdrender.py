@@ -130,26 +130,56 @@ class TestUnsupportedSyntaxIsEscaped(unittest.TestCase):
 class TestIndentedListDoesNotHang(unittest.TestCase):
     """字下げされた行からリストが始まると _render_runs が無限ループしていた
     回帰の再発防止（_take_list が先頭項目の深さ 0 を保証していなかった件）。
-    タイムアウト内に例外なく終了し、何らかの妥当な HTML を返すことだけを
-    確認する（字下げ起点のリストの入れ子形はどう平坦化されてもよい）。
+
+    05 §4.1 は「リストの先頭項目が字下げされている場合は、全項目の深さを
+    先頭項目を基準に正規化する」と定めており、入れ子構造の保存は要求しない。
+    要求されるのは (1) 全項目が欠落なく読める形で出力されること、
+    (2) 処理が必ず停止すること、の 2 点のみ（結果が複数のリストに
+    分割されてよい）。以下では停止確認に加え、現在の実装が正規化した
+    結果の HTML 全文を固定して検証する。
     """
 
     def test_list_starting_with_indented_item_terminates(self):
         result = _render_in_subprocess("  - a1\n- a")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue(result.stdout.startswith("<ul>"), result.stdout)
+        self.assertEqual(result.stdout, "<ul><li>a1</li><li>a</li></ul>")
+        # 欠落なし: 全項目のテキストが出力に含まれる
+        self.assertIn("a1", result.stdout)
+        self.assertIn(">a<", result.stdout)
+
+    def test_marker_change_after_indented_item_terminates(self):
+        result = _render_in_subprocess("  - a\n- b\n  1. c")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout,
+            "<ul><li>a</li><li>b</li></ul>\n<ol><li>c</li></ol>")
+        for text in ("a", "b", "c"):
+            self.assertIn(">%s<" % text, result.stdout)
+
+    def test_deeply_indented_ordered_list_with_bullet_child_terminates(self):
+        result = _render_in_subprocess("  1. a\n    - a1\n  2. b")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout,
+            "<ol><li>a</li></ol>\n<ul><li>a1</li></ul>\n<ol><li>b</li></ol>")
+        for text in ("a", "a1", "b"):
+            self.assertIn(">%s<" % text, result.stdout)
 
     def test_paragraph_then_indented_list_terminates(self):
         result = _render_in_subprocess("説明文\n  - 字下げされた項目\n- 通常の項目")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("<p>説明文</p>", result.stdout)
         self.assertIn("<ul>", result.stdout)
+        self.assertIn("字下げされた項目", result.stdout)
+        self.assertIn("通常の項目", result.stdout)
 
     def test_heading_then_indented_list_terminates(self):
         result = _render_in_subprocess("## 見出し\n  - 字下げされた項目\n- 通常の項目")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("<h2", result.stdout)
         self.assertIn("<ul>", result.stdout)
+        self.assertIn("字下げされた項目", result.stdout)
+        self.assertIn("通常の項目", result.stdout)
 
 
 if __name__ == "__main__":
