@@ -19,6 +19,7 @@ from . import refs as refs_mod
 from . import search as search_mod
 from . import traverse as traverse_mod
 from . import views
+from .errors import KgError
 
 
 @dataclass
@@ -334,3 +335,60 @@ ROUTES = [
     (re.compile(r"^/t/(%s)$" % SLUG), _topic),
     (re.compile(r"^/p/(%s)/(%s)/(%s)$" % (SLUG, SLUG, SLUG)), _page),
 ]
+
+
+LOOPBACK_HOSTS = ("127.0.0.1", "::1", "localhost")
+DEFAULT_PORT = 8787
+
+
+def run_server(ctx, host, port, open_browser=False):
+    """前景で待ち受ける。SIGINT で 0 を返す（05 §2.1）。"""
+    import sys
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    from urllib.parse import parse_qs, unquote, urlsplit
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.0"
+
+        def _dispatch(self, method):
+            parsed = urlsplit(self.path)
+            response = route(method, unquote(parsed.path),
+                             parse_qs(parsed.query), ctx)
+            self.send_response(response.status)
+            self.send_header("Content-Type", response.content_type)
+            self.send_header("Content-Length", str(len(response.body)))
+            for key, value in response.headers.items():
+                self.send_header(key, value)
+            self.end_headers()
+            self.wfile.write(response.body)
+
+        def do_GET(self):
+            self._dispatch("GET")
+
+        def do_POST(self):
+            self._dispatch("POST")
+
+        def log_message(self, fmt, *args):
+            pass                      # stdout を汚さない
+
+    try:
+        httpd = HTTPServer((host, port), Handler)
+    except OSError as e:
+        raise KgError("待ち受けを開始できない（%s:%d）: %s。"
+                      "--port で別のポートを指定すること" % (host, port, e))
+    actual = httpd.server_address[1]
+    url = "http://%s:%d/" % (host, actual)
+    print("kg serve: %s で待ち受け中（Ctrl-C で停止）" % url, file=sys.stderr)
+    if open_browser:
+        try:
+            import webbrowser
+            webbrowser.open(url)
+        except Exception as e:
+            print("kg serve: 警告: ブラウザを開けなかった: %s" % e, file=sys.stderr)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("", file=sys.stderr)
+    finally:
+        httpd.server_close()
+    return 0
