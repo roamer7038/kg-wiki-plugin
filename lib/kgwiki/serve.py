@@ -157,6 +157,21 @@ def _home(ctx, query):
     return _html(views.home(topic_stats(ctx), recent))
 
 
+def _topic_unbuilt(ctx, name):
+    """05 §6.2: topic 単位の未 build 判定。mtime は使わず manifest を照合する。
+
+    対象層のいずれかで topic ディレクトリが存在し、かつそこの
+    _derived/manifest.json が無い、または is_current() が偽なら未 build。
+    """
+    for layer in ctx.layer_list:
+        if name not in layers_mod.fs_topics(layer.root):
+            continue
+        data = manifest_mod.load(layers_mod.derived_dir(layer.root, name))
+        if not manifest_mod.is_current(data):
+            return True
+    return False
+
+
 def _topic(ctx, query, name):
     merged, _shadow = load_merged_index(ctx)
     type_filter = _one(query, "type")
@@ -174,7 +189,11 @@ def _topic(ctx, query, name):
             "404 Not Found", "トピック %s は対象層に存在しない。" % name), 404)
     for type_dir in groups:
         groups[type_dir] = _by_updated_desc_ref_asc(groups[type_dir])
-    return _html(views.topic(name, groups, type_filter))
+    banners = []
+    if _topic_unbuilt(ctx, name):
+        banners.append(("unbuilt", "このトピックは未 build。"
+                                   "検索と被リンクは利用できない（kg build を実行）。"))
+    return _html(views.topic(name, groups, type_filter, banners))
 
 
 def _resolver(merged):
@@ -211,7 +230,11 @@ def _page(ctx, query, topic, type_dir, slug):
     try:
         page_obj, issues = pages_mod.load_page(
             path, layer.kind, topic, type_dir, None)
-    except Exception:
+    except OSError:
+        # find_page() が is_file() を確認した後の TOCTOU（削除・権限変更等）。
+        # frontmatter パース不能は load_page が例外ではなく (None, issues) を
+        # 返す契約なので、ここで捕捉するのはファイル読み取り自体の失敗のみ。
+        # 想定外の例外は伝播させる（500 への変換は HTTP アダプタの責務。05 §3.6）。
         page_obj, issues = None, []
     resolve = _resolver(merged)
     banners = []
@@ -289,7 +312,15 @@ def _search(ctx, query):
     topic_param = _one(query, "topic")
     if topic_param:
         topics = [t for t in topic_param.split(",") if t]
-    hits = search_mod.run_search(q, ctx.layer_list, topics, limit, False)
+    layer_param = _one(query, "layer")
+    if layer_param in (layers_mod.GLOBAL, layers_mod.PROJECT):
+        # ctx.layer_list は select_layers 済みの確定リストから絞り込むのみ。
+        # select_layers は再度呼ばない（05 §5.1 は既存 API の再利用を要求する）。
+        layer_list = [ly for ly in ctx.layer_list if ly.kind == layer_param]
+    else:
+        # "all" もそれ以外の不正な値も既定（全層）にフォールバックする。
+        layer_list = ctx.layer_list
+    hits = search_mod.run_search(q, layer_list, topics, limit, False)
     type_filter = _one(query, "type")
     if type_filter:
         hits = [(s, r) for s, r in hits if r.get("type") == type_filter]
