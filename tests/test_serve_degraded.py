@@ -49,6 +49,22 @@ class TestDegraded(unittest.TestCase):
         self.assertEqual(r.status, 200)
         self.assertIn("本文テキスト", r.body.decode("utf-8"))
 
+    def test_field_issue_banner_lists_messages_not_only_codes(self):
+        """05 §6.3「バナーに列挙する」。
+
+        code だけを並べると同一 code が重複表示されるだけで、どのフィールドが
+        問題なのかが読み手に伝わらない。kg validate と同じ message を出す。
+        """
+        path = self.write("bad-fields",
+                          "---\ntitle: 不正\ntype: concepts\nslug: bad-fields\n"
+                          "updated: 2026-07-24\nnosuchfield: x\n"
+                          "keywords: \"リストでない\"\n---\n\n読める本文\n")
+        body = self.get(path).body.decode("utf-8")
+        self.assertIn("未知キー: nosuchfield", body)
+        self.assertIn("keywords は文字列リストであること", body)
+        self.assertIn("kg validate", body)
+        self.assertIn("読める本文", body)
+
     def test_new_page_shows_stale_banner(self):
         r = self.get(self.write("unknown-key", UNKNOWN_KEY))
         self.assertIn("build", r.body.decode("utf-8"))

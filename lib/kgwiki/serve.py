@@ -281,8 +281,10 @@ def _page(ctx, query, topic, type_dir, slug):
         data = _fallback_view(ref, layer.kind, text, banners, resolve)
         return _html(views.page(data))
     if issues:
-        banners.append(("error", "frontmatter に問題がある: "
-                        + "、".join(i.code for i in issues)))
+        # code だけでは「どのフィールドが問題か」が伝わらない（同一 code が
+        # 重複表示されるだけになる）。kg validate と同じ message を列挙する。
+        banners.append(("error", "frontmatter に問題がある（kg validate で詳細を確認）: "
+                        + "、".join("%s（%s）" % (i.message, i.code) for i in issues)))
     return _html(views.page(_page_view(ctx, page_obj, layer, banners,
                                        merged, resolve)))
 
