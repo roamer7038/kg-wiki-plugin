@@ -1,14 +1,37 @@
 """mdrender: Markdown サブセット → HTML（05 §4.1）。"""
 
+import os
+import subprocess
+import sys
 import unittest
 
-from helpers import LIB  # noqa: F401
+from helpers import LIB
 from kgwiki import mdrender
 
 
 def render(md):
     """resolve は Task 2 で使う。ここでは常に解決済みを返すダミー。"""
     return mdrender.render(md, lambda ref: (f"/p/{ref}", ref, True))
+
+
+def _render_in_subprocess(md, timeout=10):
+    """別プロセスで mdrender.render(md, ...) を実行し、標準出力の HTML を返す。
+
+    _render_runs の無限ループ回帰を検出するためのヘルパー。プロセスが
+    ハングしても subprocess.run の timeout で必ず打ち切られる（テスト自体や
+    CI が固まらない）。signal.alarm は Windows で動かないため使わない。
+    """
+    script = (
+        "from kgwiki import mdrender\n"
+        "import sys\n"
+        "sys.stdout.write(mdrender.render(%r, lambda r: ('/p/' + r, r, True)))\n"
+        % (md,)
+    )
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(LIB)
+    return subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True, text=True, timeout=timeout, env=env)
 
 
 class TestBlocks(unittest.TestCase):
@@ -102,6 +125,31 @@ class TestUnsupportedSyntaxIsEscaped(unittest.TestCase):
         # 画像は対応表に無い。リンク記法にも一致させない（先頭の ! を含めて原文）
         self.assertEqual(render("![alt](http://example.com/a.png)"),
                          "<p>!<a href=\"http://example.com/a.png\">alt</a></p>")
+
+
+class TestIndentedListDoesNotHang(unittest.TestCase):
+    """字下げされた行からリストが始まると _render_runs が無限ループしていた
+    回帰の再発防止（_take_list が先頭項目の深さ 0 を保証していなかった件）。
+    タイムアウト内に例外なく終了し、何らかの妥当な HTML を返すことだけを
+    確認する（字下げ起点のリストの入れ子形はどう平坦化されてもよい）。
+    """
+
+    def test_list_starting_with_indented_item_terminates(self):
+        result = _render_in_subprocess("  - a1\n- a")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.startswith("<ul>"), result.stdout)
+
+    def test_paragraph_then_indented_list_terminates(self):
+        result = _render_in_subprocess("説明文\n  - 字下げされた項目\n- 通常の項目")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("<p>説明文</p>", result.stdout)
+        self.assertIn("<ul>", result.stdout)
+
+    def test_heading_then_indented_list_terminates(self):
+        result = _render_in_subprocess("## 見出し\n  - 字下げされた項目\n- 通常の項目")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("<h2", result.stdout)
+        self.assertIn("<ul>", result.stdout)
 
 
 if __name__ == "__main__":
