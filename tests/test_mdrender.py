@@ -43,6 +43,21 @@ class TestBlocks(unittest.TestCase):
     def test_ordered_list(self):
         self.assertEqual(render("1. a\n2. b"), "<ol><li>a</li><li>b</li></ol>")
 
+    def test_marker_change_starts_new_list(self):
+        # 空行なしで bullet → ordered に切り替わったら別リストとして扱う（05 §4.1）
+        self.assertEqual(
+            render("- a\n- b\n1. c\n2. d"),
+            "<ul><li>a</li><li>b</li></ul>\n<ol><li>c</li><li>d</li></ol>")
+
+    def test_nested_ordered_list(self):
+        # ネストした 1. 形式の子リストも <ol> になる（05 §4.1、<ul> 固定は誤り）
+        self.assertEqual(
+            render("1. a\n  1. a1\n2. b"),
+            "<ol><li>a<ol><li>a1</li></ol></li><li>b</li></ol>")
+
+    def test_heading_strips_trailing_whitespace(self):
+        self.assertEqual(render("## 定義   "), '<h2 id="sec-1">定義</h2>')
+
     def test_fenced_code_is_escaped_and_not_inline_processed(self):
         md = "```python\nx = a['**b**']\n```"
         self.assertEqual(

@@ -26,19 +26,23 @@ def render(md_text: str, resolve) -> str:
     i = 0
     while i < len(lines):
         line = lines[i]
+        if not line.strip():
+            i += 1
+            continue
+        if not _is_block_start(lines, i):
+            i, block = _take_paragraph(lines, i, resolve)
+            out.append(block)
+            continue
         if line.startswith("```"):
             i, block = _take_fence(lines, i)
             out.append(block)
-            continue
-        if not line.strip():
-            i += 1
             continue
         m = _HEADING_RE.match(line)
         if m:
             state["heading_no"] += 1
             level = min(max(len(m.group(1)), 2), 4)
             out.append('<h{0} id="sec-{1}">{2}</h{0}>'.format(
-                level, state["heading_no"], inline(m.group(2), resolve)))
+                level, state["heading_no"], inline(m.group(2).strip(), resolve)))
             i += 1
             continue
         if _HR_RE.match(line.strip()):
@@ -49,13 +53,21 @@ def render(md_text: str, resolve) -> str:
             i, block = _take_table(lines, i, resolve)
             out.append(block)
             continue
-        if _BULLET_RE.match(line) or _ORDERED_RE.match(line):
-            i, block = _take_list(lines, i, resolve)
-            out.append(block)
-            continue
-        i, block = _take_paragraph(lines, i, resolve)
+        # 残る分岐はリスト（_is_block_start が True のケースの最後の候補）
+        i, block = _take_list(lines, i, resolve)
         out.append(block)
     return "\n".join(out)
+
+
+def _is_block_start(lines, i):
+    """行 i が段落ではなく別ブロック（フェンス／見出し／水平線／テーブル／リスト）の
+    開始かどうか。render() の分岐と _take_paragraph() の終端判定の両方で使う。
+    """
+    line = lines[i]
+    return (line.startswith("```") or _HEADING_RE.match(line) is not None
+            or _HR_RE.match(line.strip()) is not None or _is_table(lines, i)
+            or _BULLET_RE.match(line) is not None
+            or _ORDERED_RE.match(line) is not None)
 
 
 def _take_fence(lines, i):
@@ -93,16 +105,29 @@ def _take_table(lines, i, resolve):
 
 
 def _take_list(lines, i, resolve):
-    """インデント 2 段までのリスト。ネストは 2 スペース単位で判定する。"""
-    items = []          # [(depth, tag, text)]
-    tag = "ol" if _ORDERED_RE.match(lines[i]) else "ul"
+    """インデント 2 段までのリスト。ネストは 2 スペース単位で判定する。
+    同じ深さでマーカー種別（- / * ↔ 1.）が変わったらそこでリストを区切る
+    （05 §4.1: bullet → <ul>、ordered → <ol> を区別する）。
+    """
+    items = []          # [(depth, marker, text)]
+    depth_marker = {}   # depth -> このリスト内でその深さに確定したマーカー種別
     while i < len(lines):
-        m = _BULLET_RE.match(lines[i]) or _ORDERED_RE.match(lines[i])
+        m = _BULLET_RE.match(lines[i])
+        marker = "ul"
+        if m is None:
+            m = _ORDERED_RE.match(lines[i])
+            marker = "ol"
         if m is None:
             break
         depth = min(len(m.group(1)) // 2, 1)
-        items.append((depth, m.group(2)))
+        for deeper in [d for d in depth_marker if d > depth]:
+            del depth_marker[deeper]
+        if depth_marker.get(depth, marker) != marker:
+            break  # マーカー種別が変わった → ここで打ち切り、次のリストとして扱う
+        depth_marker[depth] = marker
+        items.append((depth, marker, m.group(2)))
         i += 1
+    tag = items[0][1] if items else "ul"
     return i, _render_items(items, tag, resolve)
 
 
@@ -110,15 +135,17 @@ def _render_items(items, tag, resolve):
     out = []
     idx = 0
     while idx < len(items):
-        depth, text = items[idx]
+        depth, _marker, text = items[idx]
         idx += 1
         children = []
         while idx < len(items) and items[idx][0] > depth:
-            children.append((items[idx][0] - 1, items[idx][1]))
+            child_depth, child_marker, child_text = items[idx]
+            children.append((child_depth - 1, child_marker, child_text))
             idx += 1
         body = inline(text, resolve)
         if children:
-            body += _render_items(children, "ul", resolve)
+            child_tag = children[0][1]
+            body += _render_items(children, child_tag, resolve)
         out.append("<li>%s</li>" % body)
     return "<%s>%s</%s>" % (tag, "".join(out), tag)
 
@@ -126,9 +153,7 @@ def _render_items(items, tag, resolve):
 def _take_paragraph(lines, i, resolve):
     buf = []
     while i < len(lines) and lines[i].strip():
-        if (lines[i].startswith("```") or _HEADING_RE.match(lines[i])
-                or _BULLET_RE.match(lines[i]) or _ORDERED_RE.match(lines[i])
-                or _HR_RE.match(lines[i].strip()) or _is_table(lines, i)):
+        if _is_block_start(lines, i):
             break
         buf.append(lines[i].strip())
         i += 1
