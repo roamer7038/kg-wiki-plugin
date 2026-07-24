@@ -182,5 +182,57 @@ class TestIndentedListDoesNotHang(unittest.TestCase):
         self.assertIn("通常の項目", result.stdout)
 
 
+class TestInline(unittest.TestCase):
+    def test_strong_and_em(self):
+        self.assertEqual(render("**太字**と*斜体*"),
+                         "<p><strong>太字</strong>と<em>斜体</em></p>")
+
+    def test_inline_code(self):
+        self.assertEqual(render("`kg build` を実行"),
+                         "<p><code>kg build</code> を実行</p>")
+
+    def test_link(self):
+        self.assertEqual(render("[例](https://example.com)"),
+                         '<p><a href="https://example.com">例</a></p>')
+
+    def test_wikilink_resolved(self):
+        html = mdrender.render(
+            "[[llm/concepts/rag]] を参照",
+            lambda ref: ("/p/" + ref, "RAG", True))
+        self.assertEqual(html, '<p><a href="/p/llm/concepts/rag">RAG</a> を参照</p>')
+
+    def test_wikilink_unresolved_gets_broken_class(self):
+        html = mdrender.render(
+            "[[llm/concepts/nope]]",
+            lambda ref: ("/search?q=nope", "llm/concepts/nope", False))
+        self.assertEqual(
+            html,
+            '<p><a class="broken" href="/search?q=nope">llm/concepts/nope</a></p>')
+
+    def test_code_span_is_not_reprocessed(self):
+        """確定区間の再処理禁止: コードスパン内の [[...]] はリンクにしない。"""
+        html = mdrender.render("`[[a/b/c]]`", lambda ref: ("/p/" + ref, ref, True))
+        self.assertEqual(html, "<p><code>[[a/b/c]]</code></p>")
+
+    def test_code_span_content_is_escaped(self):
+        self.assertEqual(render("`<b>`"), "<p><code>&lt;b&gt;</code></p>")
+
+
+class TestLinkSchemes(unittest.TestCase):
+    """05 §8: http / https / mailto 以外はリンク化しない。"""
+
+    def test_javascript_scheme_is_not_linked(self):
+        self.assertEqual(render("[x](javascript:alert(1))"),
+                         "<p>[x](javascript:alert(1))</p>")
+
+    def test_data_scheme_is_not_linked(self):
+        self.assertEqual(render("[x](data:text/html,<script>)"),
+                         "<p>[x](data:text/html,&lt;script&gt;)</p>")
+
+    def test_mailto_is_linked(self):
+        self.assertEqual(render("[m](mailto:a@example.com)"),
+                         '<p><a href="mailto:a@example.com">m</a></p>')
+
+
 if __name__ == "__main__":
     unittest.main()

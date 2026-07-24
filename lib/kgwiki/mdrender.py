@@ -13,6 +13,15 @@ _BULLET_RE = re.compile(r"^(\s*)[-*] +(.*)$")
 _ORDERED_RE = re.compile(r"^(\s*)\d+\. +(.*)$")
 _TABLE_SEP_RE = re.compile(r"^\|[\s:|-]+\|$")
 
+ALLOWED_SCHEMES = ("http://", "https://", "mailto:")
+
+_INLINE_RE = re.compile(
+    r"(?P<code>`[^`\n]+`)"
+    r"|(?P<wiki>\[\[[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+\]\])"
+    r"|(?P<link>\[[^\]\n]+\]\([^)\s]*\))"
+    r"|(?P<strong>\*\*[^*\n]+\*\*)"
+    r"|(?P<em>\*[^*\n]+\*)")
+
 
 def esc(text) -> str:
     return html.escape(str(text), quote=True)
@@ -190,5 +199,40 @@ def _take_paragraph(lines, i, resolve):
 
 
 def inline(text: str, resolve) -> str:
-    """Task 2 で実装する。現時点はエスケープのみ。"""
-    return esc(text)
+    """インライン記法を処理する。
+
+    左から非重複で走査し、確定した区間は再処理しない（05 §4.1）。
+    代替の順序がそのまま優先順位: コードスパン → wikilink → リンク → 強調。
+    """
+    out = []
+    pos = 0
+    for m in _INLINE_RE.finditer(text):
+        out.append(esc(text[pos:m.start()]))
+        kind = m.lastgroup
+        raw = m.group()
+        if kind == "code":
+            out.append("<code>%s</code>" % esc(raw[1:-1]))
+        elif kind == "wiki":
+            out.append(_wikilink(raw[2:-2], resolve))
+        elif kind == "link":
+            out.append(_link(raw))
+        elif kind == "strong":
+            out.append("<strong>%s</strong>" % esc(raw[2:-2]))
+        else:
+            out.append("<em>%s</em>" % esc(raw[1:-1]))
+        pos = m.end()
+    out.append(esc(text[pos:]))
+    return "".join(out)
+
+
+def _wikilink(ref, resolve):
+    href, label, ok = resolve(ref)
+    cls = "" if ok else ' class="broken"'
+    return '<a%s href="%s">%s</a>' % (cls, esc(href), esc(label))
+
+
+def _link(raw):
+    label, _, url = raw[1:-1].partition("](")
+    if not url.startswith(ALLOWED_SCHEMES):
+        return esc(raw)          # リンク化せず原文表示（05 §8）
+    return '<a href="%s">%s</a>' % (esc(url), esc(label))
