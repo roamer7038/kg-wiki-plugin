@@ -182,6 +182,77 @@ class TestIndentedListDoesNotHang(unittest.TestCase):
         self.assertIn("通常の項目", result.stdout)
 
 
+class TestInlineDoesNotHang(unittest.TestCase):
+    """inline() の ReDoS 回帰防止。_INLINE_RE のリンク代替
+    `\\[[^\\]\\n]+\\]\\([^)\\s]*\\)` はラベルの文字クラスが `[` を除外して
+    いなかったため、`]` で閉じない `[` が連続する入力で O(n^2) になっていた
+    （実測: '[' * 100000 で 8.42s、'[[' * 100000 で 33.84s）。
+    """
+
+    def _assert_terminates(self, md, timeout=10):
+        # md は数万文字になり得るため、コマンドライン引数（-c スクリプト）に
+        # 埋め込むと ARG_MAX を超える（Argument list too long）。標準入力で渡す。
+        script = (
+            "from kgwiki import mdrender\n"
+            "import sys\n"
+            "md = sys.stdin.read()\n"
+            "sys.stdout.write(mdrender.inline(md, lambda r: ('/p/' + r, r, True)))\n"
+        )
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(LIB)
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            input=md, capture_output=True, text=True, timeout=timeout, env=env)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout
+
+    def test_unclosed_bracket_run_terminates(self):
+        # 修正前は '[' * 50000 で約2.08秒、'[' * 200000 で約33.6秒
+        # （O(n^2)）。10秒のタイムアウトに対して安全に超過する 200000 を使う。
+        self._assert_terminates("[" * 200000)
+
+    def test_double_unclosed_bracket_run_terminates(self):
+        # 修正前は '[[' * 100000 で約33.84秒（O(n^2)）。
+        self._assert_terminates("[[" * 100000)
+
+    def test_unterminated_code_span_run_terminates(self):
+        self._assert_terminates("`" * 50000)
+
+    def test_unterminated_emphasis_run_terminates(self):
+        self._assert_terminates("*" * 50000)
+
+
+class TestUnterminatedSyntaxIsEscapedAndBalanced(unittest.TestCase):
+    """単独の区切り文字（未終端記法）は解釈せずエスケープして原文のまま
+    出力する（05 §4.1）。ここでの期待値は実装を実際に実行して得たもの
+    （現状の挙動を仕様として固定する）。
+    """
+
+    def test_unterminated_code_span(self):
+        self.assertEqual(render("`abc"), "<p>`abc</p>")
+
+    def test_unterminated_bracket(self):
+        self.assertEqual(render("[abc"), "<p>[abc</p>")
+
+    def test_unterminated_strong(self):
+        self.assertEqual(render("**abc"), "<p>**abc</p>")
+
+    def test_unterminated_emphasis(self):
+        self.assertEqual(render("*abc"), "<p>*abc</p>")
+
+
+class TestNestedEmphasisIsNotSupported(unittest.TestCase):
+    """入れ子の強調は仕様が規定しておらず、実データにも 0 件（05 §4.1 対象外）。
+    現状の割り切った挙動（* が em の区切りとしても解釈される）を意図的に
+    固定する。
+    """
+
+    def test_nested_emphasis_is_not_parsed_as_nested(self):
+        self.assertEqual(
+            render("**a *b* c**"),
+            "<p>*<em>a </em>b<em> c</em>*</p>")
+
+
 class TestInline(unittest.TestCase):
     def test_strong_and_em(self):
         self.assertEqual(render("**太字**と*斜体*"),

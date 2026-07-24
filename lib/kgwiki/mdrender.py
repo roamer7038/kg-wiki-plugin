@@ -18,7 +18,7 @@ ALLOWED_SCHEMES = ("http://", "https://", "mailto:")
 _INLINE_RE = re.compile(
     r"(?P<code>`[^`\n]+`)"
     r"|(?P<wiki>\[\[[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+\]\])"
-    r"|(?P<link>\[[^\]\n]+\]\([^)\s]*\))"
+    r"|(?P<link>\[[^\[\]\n]+\]\([^)\s]*\))"
     r"|(?P<strong>\*\*[^*\n]+\*\*)"
     r"|(?P<em>\*[^*\n]+\*)")
 
