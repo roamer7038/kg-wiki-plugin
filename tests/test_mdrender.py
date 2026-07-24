@@ -55,6 +55,19 @@ class TestBlocks(unittest.TestCase):
             render("1. a\n  1. a1\n2. b"),
             "<ol><li>a<ol><li>a1</li></ol></li><li>b</li></ol>")
 
+    def test_marker_change_at_depth_1_does_not_split_parent_list(self):
+        # 深さ 1 でマーカーが bullet→ordered に変わっても、深さ 0 の a/b は
+        # 同一の <ul> の兄弟のまま。子は連ごとに <ul> と <ol> に分かれる。
+        self.assertEqual(
+            render("- a\n  - a1\n  1. a2\n- b"),
+            "<ul><li>a<ul><li>a1</li></ul><ol><li>a2</li></ol></li><li>b</li></ul>")
+
+    def test_marker_change_at_depth_1_does_not_split_parent_ordered_list(self):
+        # 同様に深さ 0 が ordered の場合も a/b は同一の <ol> の兄弟のまま。
+        self.assertEqual(
+            render("1. a\n  1. a1\n  - a2\n2. b"),
+            "<ol><li>a<ol><li>a1</li></ol><ul><li>a2</li></ul></li><li>b</li></ol>")
+
     def test_heading_strips_trailing_whitespace(self):
         self.assertEqual(render("## 定義   "), '<h2 id="sec-1">定義</h2>')
 

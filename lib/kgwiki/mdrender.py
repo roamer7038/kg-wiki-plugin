@@ -105,12 +105,12 @@ def _take_table(lines, i, resolve):
 
 
 def _take_list(lines, i, resolve):
-    """インデント 2 段までのリスト。ネストは 2 スペース単位で判定する。
-    同じ深さでマーカー種別（- / * ↔ 1.）が変わったらそこでリストを区切る
-    （05 §4.1: bullet → <ul>、ordered → <ol> を区別する）。
+    """インデント 2 段までの連続するリスト行を全て集める。
+    マーカー種別（- / * ↔ 1.）が変わっても打ち切らない（打ち切りは、
+    リスト行そのものが途切れたときのみ）。構造化・タグ分けは
+    _render_runs 側の責務。
     """
-    items = []          # [(depth, marker, text)]
-    depth_marker = {}   # depth -> このリスト内でその深さに確定したマーカー種別
+    items = []  # [(depth, marker, text)]
     while i < len(lines):
         m = _BULLET_RE.match(lines[i])
         marker = "ul"
@@ -120,34 +120,40 @@ def _take_list(lines, i, resolve):
         if m is None:
             break
         depth = min(len(m.group(1)) // 2, 1)
-        for deeper in [d for d in depth_marker if d > depth]:
-            del depth_marker[deeper]
-        if depth_marker.get(depth, marker) != marker:
-            break  # マーカー種別が変わった → ここで打ち切り、次のリストとして扱う
-        depth_marker[depth] = marker
         items.append((depth, marker, m.group(2)))
         i += 1
-    tag = items[0][1] if items else "ul"
-    return i, _render_items(items, tag, resolve)
+    # トップレベルの連は別ブロックとして "\n" で区切る
+    # （test_marker_change_starts_new_list の既存仕様）。
+    return i, "\n".join(_render_runs(items, resolve))
 
 
-def _render_items(items, tag, resolve):
-    out = []
+def _render_runs(items, resolve):
+    """items（先頭要素と同じ深さの兄弟、およびその子孫）を、深さごと・
+    マーカー種別ごとの連（run）に分割し、連ごとに <ul> または <ol> を
+    1 つ出す（05 §4.1）。返り値は連ごとの HTML 文字列のリスト。
+    子リストは直前の <li> の中に、連同士の区切りなしで並べて入る。
+    """
+    depth = items[0][0]
+    runs = []
     idx = 0
     while idx < len(items):
-        depth, _marker, text = items[idx]
-        idx += 1
-        children = []
-        while idx < len(items) and items[idx][0] > depth:
-            child_depth, child_marker, child_text = items[idx]
-            children.append((child_depth - 1, child_marker, child_text))
+        run_marker = items[idx][1]
+        run = []
+        while (idx < len(items) and items[idx][0] == depth
+               and items[idx][1] == run_marker):
+            _d, _marker, text = items[idx]
             idx += 1
-        body = inline(text, resolve)
-        if children:
-            child_tag = children[0][1]
-            body += _render_items(children, child_tag, resolve)
-        out.append("<li>%s</li>" % body)
-    return "<%s>%s</%s>" % (tag, "".join(out), tag)
+            children = []
+            while idx < len(items) and items[idx][0] > depth:
+                child_depth, child_marker, child_text = items[idx]
+                children.append((child_depth - 1, child_marker, child_text))
+                idx += 1
+            body = inline(text, resolve)
+            if children:
+                body += "".join(_render_runs(children, resolve))
+            run.append("<li>%s</li>" % body)
+        runs.append("<%s>%s</%s>" % (run_marker, "".join(run), run_marker))
+    return runs
 
 
 def _take_paragraph(lines, i, resolve):
