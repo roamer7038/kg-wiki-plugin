@@ -227,15 +227,13 @@ def _page(ctx, query, topic, type_dir, slug):
             "ページ %s は未作成。`kg new %s` で作成できる。%s" % (ref, ref, deleted),
             extra), 404)
 
-    try:
-        page_obj, issues = pages_mod.load_page(
-            path, layer.kind, topic, type_dir, None)
-    except OSError:
-        # find_page() が is_file() を確認した後の TOCTOU（削除・権限変更等）。
-        # frontmatter パース不能は load_page が例外ではなく (None, issues) を
-        # 返す契約なので、ここで捕捉するのはファイル読み取り自体の失敗のみ。
-        # 想定外の例外は伝播させる（500 への変換は HTTP アダプタの責務。05 §3.6）。
-        page_obj, issues = None, []
+    # frontmatter が壊れている場合、load_page は例外ではなく (None, issues) を
+    # 返す契約なので、その縮退表示（05 §6.3）に捕捉は不要。ファイル読み取り
+    # 自体の失敗（TOCTOU での削除・権限変更）は縮退表示側も同じファイルを読む
+    # ため救済できない。想定外の例外はここで握りつぶさず伝播させる
+    # （500 への変換と stderr への詳細出力は HTTP アダプタの責務。05 §3.6）。
+    page_obj, issues = pages_mod.load_page(
+        path, layer.kind, topic, type_dir, None)
     resolve = _resolver(merged)
     banners = []
     state = page_state(layer, ref, path)
