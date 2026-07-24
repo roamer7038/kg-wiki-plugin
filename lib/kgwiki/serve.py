@@ -5,6 +5,8 @@ HTTP に触れるのは §6 のアダプタのみ。検索・グラフ・層マ�
 """
 
 import re
+import sys
+import traceback
 from dataclasses import dataclass, field
 from urllib.parse import quote
 
@@ -146,6 +148,29 @@ def route(method, path, query, ctx):
             "ref は正準形 <topic>/<type>/<slug>（文字集合 [a-z0-9-]）でなければならない。"),
             400)
     return _html(views.error_page("404 Not Found", "そのページは存在しない。"), 404)
+
+
+def _safe_route(method, path, query, ctx):
+    """route() を呼び、想定外の例外を 500 に変換する（05 §3.6）。
+
+    詳細（トレースバック）は stderr にのみ出し、画面には一切出さない
+    （内部情報の漏洩防止）。500 を返した後もサーバは動き続ける（このリクエスト
+    限りの失敗として扱う）。views.error_page 自体が失敗する場合に備え、
+    最終手段として素の bytes を返す。
+    """
+    try:
+        return route(method, path, query, ctx)
+    except Exception:
+        traceback.print_exc(file=sys.stderr)
+        try:
+            return _html(views.error_page(
+                "500 Internal Server Error",
+                "サーバ内部で想定外のエラーが発生した。詳細はサーバのログ（stderr）を確認すること。"),
+                500)
+        except Exception:
+            traceback.print_exc(file=sys.stderr)
+            return Response(500, "text/plain; charset=utf-8",
+                            b"500 Internal Server Error")
 
 
 def _style(ctx, query):
@@ -343,7 +368,8 @@ DEFAULT_PORT = 8787
 
 def run_server(ctx, host, port, open_browser=False):
     """前景で待ち受ける。SIGINT で 0 を返す（05 §2.1）。"""
-    import sys
+    import errno
+    import socket
     from http.server import BaseHTTPRequestHandler, HTTPServer
     from urllib.parse import parse_qs, unquote, urlsplit
 
@@ -352,8 +378,8 @@ def run_server(ctx, host, port, open_browser=False):
 
         def _dispatch(self, method):
             parsed = urlsplit(self.path)
-            response = route(method, unquote(parsed.path),
-                             parse_qs(parsed.query), ctx)
+            response = _safe_route(method, unquote(parsed.path),
+                                   parse_qs(parsed.query), ctx)
             self.send_response(response.status)
             self.send_header("Content-Type", response.content_type)
             self.send_header("Content-Length", str(len(response.body)))
@@ -371,13 +397,27 @@ def run_server(ctx, host, port, open_browser=False):
         def log_message(self, fmt, *args):
             pass                      # stdout を汚さない
 
+    # LOOPBACK_HOSTS の中で IPv6 リテラルは "::1" のみ（"localhost" は OS 解決に
+    # 委ねる）。host に ":" を含めば IPv6 として扱う。HTTPServer は
+    # address_family = socket.AF_INET 固定のため、素のままでは "::1" を
+    # 指定してもバインドに必ず失敗する。
+    is_ipv6 = ":" in host
+
+    class Server(HTTPServer):
+        address_family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+
+    display_host = "[%s]" % host if is_ipv6 else host
     try:
-        httpd = HTTPServer((host, port), Handler)
+        httpd = Server((host, port), Handler)
     except OSError as e:
-        raise KgError("待ち受けを開始できない（%s:%d）: %s。"
-                      "--port で別のポートを指定すること" % (host, port, e))
+        detail = "待ち受けを開始できない（%s:%d）: %s" % (display_host, port, e)
+        if e.errno == errno.EADDRINUSE:
+            detail += "。--port で別のポートを指定すること"
+        else:
+            detail += "。"
+        raise KgError(detail)
     actual = httpd.server_address[1]
-    url = "http://%s:%d/" % (host, actual)
+    url = "http://%s:%d/" % (display_host, actual)
     print("kg serve: %s で待ち受け中（Ctrl-C で停止）" % url, file=sys.stderr)
     if open_browser:
         try:

@@ -106,6 +106,10 @@ def build_parser():
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
 
+    # --json / --limit / --date は意図的に定義しない。他サブコマンドとの
+    # 対称性のために付けたくなるが、serve は読み取り専用ビューワの起動であり
+    # 該当しない。未定義なので argparse が「unrecognized arguments」で
+    # exit 3 にする（cmd_serve 側で二重にチェックする必要はない）。
     sp = sub.add_parser("serve", help="Web ビューワの起動（読み取り専用）")
     sp.add_argument("--port", type=int, default=None, metavar="N")
     sp.add_argument("--host", default=None, metavar="H")
@@ -476,9 +480,6 @@ def cmd_community(args):
 
 def cmd_serve(args):
     from . import serve
-    for name in ("json", "limit", "date"):
-        if getattr(args, name, None) not in (None, False):
-            raise UsageError("kg serve は --%s を受け付けない" % name)
     host = args.host or "127.0.0.1"
     if host not in serve.LOOPBACK_HOSTS:
         raise UsageError(
