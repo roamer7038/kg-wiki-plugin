@@ -4,7 +4,7 @@ HTTP に触れるのは §6 のアダプタのみ。検索・グラフ・層マ�
 既存モジュールに委譲し、本モジュールでは再実装しない（05 §5.1）。
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from . import graph as graph_mod
 from . import hashing
@@ -40,7 +40,7 @@ def page_state(layer, ref, path):
     topic = ref.split("/")[0]
     derived = layers_mod.derived_dir(layer.root, topic)
     data = manifest_mod.load(derived)
-    if data is None:
+    if not manifest_mod.is_current(data):
         return "unbuilt"
     recorded = (data.get("pages") or {}).get(ref)
     if recorded is None:
@@ -60,17 +60,29 @@ def backlinks(ctx, ref):
 
 
 def topic_stats(ctx):
-    """ホーム用のトピック統計（05 §3.2）。"""
-    stats = {}
+    """ホーム用のトピック統計（05 §3.2）。
+
+    ref 単位で重複を除去する（層マージ相当。shadow は 1 回のみ数える）。
+    プロジェクト層優先（DR-2）は layer_list の走査順（global→project）に
+    委ね、後勝ちの上書きで採用する。未 build のトピックも表示するため
+    ファイルシステム走査は維持し、index には頼らない。
+    """
+    topic_names = set()
+    entries = {}  # ref -> (topic, type_dir, layer, path)
     for layer in ctx.layer_list:
         topics = ctx.topics if ctx.topics is not None else layers_mod.fs_topics(layer.root)
+        topic_names.update(topics)
         for topic in topics:
-            entry = stats.setdefault(
-                topic, {"topic": topic, "count": 0, "types": {}, "stale": 0})
             for type_dir, slug, path in layers_mod.iter_page_paths(layer.root, topic):
                 ref = "%s/%s/%s" % (topic, type_dir, slug)
-                entry["count"] += 1
-                entry["types"][type_dir] = entry["types"].get(type_dir, 0) + 1
-                if page_state(layer, ref, path) != "ok":
-                    entry["stale"] += 1
+                entries[ref] = (topic, type_dir, layer, path)
+
+    stats = {name: {"topic": name, "count": 0, "types": {}, "stale": 0}
+              for name in topic_names}
+    for ref, (topic, type_dir, layer, path) in entries.items():
+        entry = stats[topic]
+        entry["count"] += 1
+        entry["types"][type_dir] = entry["types"].get(type_dir, 0) + 1
+        if page_state(layer, ref, path) != "ok":
+            entry["stale"] += 1
     return [stats[name] for name in sorted(stats)]
