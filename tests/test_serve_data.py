@@ -62,6 +62,22 @@ class ServeDataTestCase(unittest.TestCase):
         self.assertEqual(serve.page_state(layer, "llm/concepts/rag", path),
                          "unbuilt")
 
+    def test_page_state_unbuilt_when_manifest_version_mismatches(self):
+        """schema/tool version 不一致の manifest は要 build 扱い。
+
+        build.py / validate.py と同じ manifest.is_current() 規約に従う。
+        これを通さないと、古い manifest に対してハッシュ比較を行い
+        "ok" を誤って返す。
+        """
+        import json
+        path = self.root / "topics/llm/_derived/manifest.json"
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["tool_version"] = "0.0.0-old"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        layer, page = serve.find_page(self.ctx, "llm/concepts/rag")
+        self.assertEqual(serve.page_state(layer, "llm/concepts/rag", page),
+                         "unbuilt")
+
     def test_backlinks_are_grouped_and_sorted(self):
         links = serve.backlinks(self.ctx, "llm/concepts/rag")
         self.assertTrue(all(isinstance(x, tuple) and len(x) == 2 for x in links))
