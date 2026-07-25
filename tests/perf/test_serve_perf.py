@@ -30,8 +30,10 @@ def build_wiki(root):
             "summary: 検索対象の要約 %d\nkeywords: [perf, graphrag]\n"
             "updated: 2026-07-24\nrelations:\n"
             "  - rel: relates_to\n    to: perf/concepts/p%04d\n---\n\n"
-            "## 定義\n本文 graphrag %d\n"
-            % (i, i, i, target, i), encoding="utf-8")
+            # 本文に wikilink を含め、ページ画面計測に mdrender の
+            # wikilink 検出・解決コストも乗せる（05 §7）。
+            "## 定義\n本文 graphrag %d。次は [[perf/concepts/p%04d]] を参照。\n"
+            % (i, i, i, target, i, target), encoding="utf-8")
 
 
 @unittest.skipUnless(os.environ.get("KG_PERF"), "KG_PERF=1 で有効")
