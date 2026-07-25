@@ -4,4 +4,4 @@ __version__ は plugin.json・manifest.json の tool_version と同期する唯�
 （同期はテストで検証する）。
 """
 
-__version__ = "0.3.0"
+__version__ = "0.5.0"
