@@ -110,6 +110,32 @@ class TestServeArgs(unittest.TestCase):
         finally:
             self.assertEqual(_stop_server(proc), 0)
 
+    def test_all_non_get_methods_return_405_over_http(self):
+        """05 §3.1: GET 以外は 405。
+
+        route() は全非 GET を 405 にするが、HTTP アダプタが do_GET/do_POST
+        しか定義しないと、PUT/DELETE/OPTIONS 等は http.server 既定の 501 に
+        なり route() に届かない（統合バグ）。実サーバに投げて 405 を確認する。
+        """
+        import http.client
+        proc = subprocess.Popen(
+            [sys.executable, str(BIN_KG), "serve", "--root", str(self.root),
+             "--host", "127.0.0.1", "--port", "0", "--quiet"],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            env=clean_env(self.root))
+        try:
+            line = _read_line_with_timeout(proc.stderr, 5.0)
+            self.assertIsNotNone(line, "サーバがタイムアウト内に応答しなかった")
+            port = int(re.search(r":(\d+)/", line).group(1))
+            for method in ("POST", "PUT", "DELETE", "OPTIONS", "PATCH"):
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+                conn.request(method, "/")
+                status = conn.getresponse().status
+                conn.close()
+                self.assertEqual(status, 405, "%s は 405 であること" % method)
+        finally:
+            self.assertEqual(_stop_server(proc), 0)
+
     def test_bind_failure_on_port_in_use_advises_port_flag(self):
         """ポート使用中（EADDRINUSE）のときだけ --port の案内を出す。"""
         proc = subprocess.Popen(

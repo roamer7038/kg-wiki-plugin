@@ -392,11 +392,15 @@ def run_server(ctx, host, port, open_browser=False):
             self.end_headers()
             self.wfile.write(response.body)
 
-        def do_GET(self):
-            self._dispatch("GET")
-
-        def do_POST(self):
-            self._dispatch("POST")
+        def __getattr__(self, name):
+            # 全 do_<METHOD> を route() へ流す。route() が GET 以外を 405 に
+            # するため、PUT / DELETE / OPTIONS 等も 501（http.server 既定）では
+            # なく 405 になる（05 §3.1）。do_GET/do_POST だけ定義すると他メソッド
+            # が route() に届かず 501 になる統合バグを避ける。
+            if name.startswith("do_"):
+                method = name[3:]
+                return lambda: self._dispatch(method)
+            raise AttributeError(name)
 
         def log_message(self, fmt, *args):
             pass                      # stdout を汚さない
