@@ -1,6 +1,6 @@
 {
   "name": "kg-wiki",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Markdown 知識リポジトリ + 派生 KG による Claude Code 知識管理",
   "author": {
     "name": "roamer7038"

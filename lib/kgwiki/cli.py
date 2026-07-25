@@ -106,6 +106,20 @@ def build_parser():
     sp.add_argument("--query", dest="query", default=None, metavar="Q")
     _add_common(sp)
 
+    # --json / --limit / --date は意図的に定義しない。他サブコマンドとの
+    # 対称性のために付けたくなるが、serve は読み取り専用ビューワの起動であり
+    # 該当しない。未定義なので argparse が「unrecognized arguments」で
+    # exit 3 にする（cmd_serve 側で二重にチェックする必要はない）。
+    sp = sub.add_parser("serve", help="Web ビューワの起動（読み取り専用）")
+    sp.add_argument("--port", type=int, default=None, metavar="N")
+    sp.add_argument("--host", default=None, metavar="H")
+    sp.add_argument("--open", action="store_true", dest="open_browser")
+    sp.add_argument("--root", metavar="PATH")
+    sp.add_argument("--layer", choices=["global", "project", "all"], default=None)
+    sp.add_argument("--topic", metavar="T[,T...]")
+    sp.add_argument("--quiet", action="store_true")
+    sp.add_argument("--debug", action="store_true")
+
     # プロンプトは stdin の hook JSON からのみ読む（引数化しない）
     sp = sub.add_parser("hook-context", help="UserPromptSubmit hook 用の軽量注入")
     sp.add_argument("--root", metavar="PATH")
@@ -464,6 +478,21 @@ def cmd_community(args):
     return 0
 
 
+def cmd_serve(args):
+    from . import serve
+    host = args.host or "127.0.0.1"
+    if host not in serve.LOOPBACK_HOSTS:
+        raise UsageError(
+            "--host はループバック（%s）のみ指定できる: %s。"
+            "ビューワは外部公開しない（FR-6.6）"
+            % ("/".join(serve.LOOPBACK_HOSTS), host))
+    port = serve.DEFAULT_PORT if args.port is None else args.port
+    if not 0 <= port <= 65535:
+        raise UsageError("--port は 0〜65535 であること")
+    ctx = serve.ViewContext(layer_list=_read_layers(args), topics=_topics(args))
+    return serve.run_server(ctx, host, port, args.open_browser)
+
+
 def cmd_hook_context(args):
     """hook 専用: 常に exit 0（空出力で正常終了する）。"""
     import time
@@ -604,6 +633,7 @@ HANDLERS = {
     "vsearch": cmd_vsearch,
     "hybrid": cmd_hybrid,
     "community": cmd_community,
+    "serve": cmd_serve,
 }
 
 
